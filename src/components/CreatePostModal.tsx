@@ -63,7 +63,7 @@ export function CreatePostModal({ isOpen, onClose, organizationId, channels, onP
           body: JSON.stringify({
             organizationId,
             channelId: selectedChannel.id,
-            content: formData.content,
+            caption: formData.content, // Cambiar content por caption para Instagram
             type: 'TEXT',
             scheduledFor: publishType === 'now' ? null : formData.scheduledFor || null,
             platform: selectedChannel.platform // Añadir plataforma para diferenciar en el backend

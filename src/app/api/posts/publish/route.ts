@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
     }
 
     const reqData = await request.json();
-    const { organizationId, channelId, content, type = 'TEXT', scheduledFor = null, platform } = reqData;
+    const { organizationId, channelId, content, caption, type = 'TEXT', scheduledFor = null, platform } = reqData;
     
     // Inicializar variables para evitar errores de "used before declaration"
     let post = null;
@@ -25,6 +25,7 @@ export async function POST(request: NextRequest) {
     console.log('Organization ID:', organizationId);
     console.log('Channel ID:', channelId);
     console.log('Content:', content);
+    console.log('Caption:', caption);
     console.log('Type:', type);
     console.log('Scheduled For:', scheduledFor);
 
@@ -92,7 +93,7 @@ export async function POST(request: NextRequest) {
     console.log('Meta completa:', JSON.stringify(channel.meta, null, 2));
     
     // Preparar el mensaje
-    const message = content;
+    const message = caption || content; // Usar caption si está disponible, sino content
     const publishData: any = { message };
     
     if (channel.platform === 'FACEBOOK') {
@@ -247,9 +248,9 @@ export async function POST(request: NextRequest) {
       }
       
       // Si no encontramos el ID directamente, intentamos usar el ID de usuario de Instagram
-      if (!instagramBusinessId && meta?.user_id) {
-        console.log('Usando ID de usuario de Instagram como alternativa:', meta.user_id);
-        instagramBusinessId = meta.user_id;
+      if (!instagramBusinessId && meta?.instagramUserId) {
+        console.log('Usando ID de usuario de Instagram como alternativa:', meta.instagramUserId);
+        instagramBusinessId = meta.instagramUserId;
         
         // Actualizar el meta para futuras publicaciones
         await prisma.channel.update({
@@ -258,7 +259,7 @@ export async function POST(request: NextRequest) {
             meta: {
               ...meta,
               instagram_business_account: {
-                id: meta.user_id,
+                id: meta.instagramUserId,
                 username: meta.username || 'instagram_user'
               }
             }
@@ -452,7 +453,7 @@ export async function POST(request: NextRequest) {
         }
         
         // Usar el ID de Instagram que tengamos disponible
-        const igId = meta?.user_id || instagramBusinessId;
+        const igId = meta?.instagramUserId || instagramBusinessId;
         
         if (igId) {
           console.log('Publicando en Instagram con ID:', igId);
@@ -468,7 +469,7 @@ export async function POST(request: NextRequest) {
             },
             body: JSON.stringify({
               image_url: placeholderImageUrl,
-              caption: caption,
+              caption: message, // Usar el mensaje preparado (caption || content)
               access_token: meta.access_token,
             }),
           });
@@ -543,11 +544,11 @@ export async function POST(request: NextRequest) {
                 headers: {
                   'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({
-                  url: placeholderImageUrl,
-                  caption: caption,
-                  access_token: page.access_token,
-                }),
+                            body: JSON.stringify({
+              url: placeholderImageUrl,
+              caption: message, // Usar el mensaje preparado (caption || content)
+              access_token: page.access_token,
+            }),
               });
               
               const fbResponseText = await fbPostResponse.text();
@@ -647,7 +648,7 @@ export async function POST(request: NextRequest) {
         data: {
           organizationId: reqData.organizationId,
           channelId: reqData.channelId,
-          caption: reqData.content,
+          caption: reqData.caption || reqData.content,
           type: reqData.type,
           status: reqData.scheduledFor && new Date(reqData.scheduledFor) > new Date() ? 'SCHEDULED' : 'PUBLISHED',
           scheduledAt: reqData.scheduledFor ? new Date(reqData.scheduledFor) : null,
