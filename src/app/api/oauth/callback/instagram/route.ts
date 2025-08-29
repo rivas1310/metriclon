@@ -117,21 +117,57 @@ export async function GET(request: NextRequest) {
     const page = accountsData.data[0];
     console.log('Instagram OAuth Callback - Usando página:', page.name);
     
-    const instagramBusinessResponse = await fetch(`https://graph.facebook.com/v18.0/${page.id}?fields=instagram_business_account&access_token=${page.access_token}`);
+    // Obtener la cuenta de Instagram Business asociada a la página
+    let instagramBusinessData;
+    let instagramBusinessAccount = null;
     
-    if (!instagramBusinessResponse.ok) {
-      const errorText = await instagramBusinessResponse.text();
-      console.error('Instagram OAuth Callback - Error obteniendo cuenta de Instagram Business:', errorText);
-      return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/dashboard?error=instagram_business_account_error`);
+    try {
+      const instagramBusinessResponse = await fetch(`https://graph.facebook.com/v18.0/${page.id}?fields=instagram_business_account&access_token=${page.access_token}`);
+      
+      if (instagramBusinessResponse.ok) {
+        instagramBusinessData = await instagramBusinessResponse.json();
+        console.log('Instagram OAuth Callback - Datos de Instagram Business:', instagramBusinessData);
+        
+        if (instagramBusinessData.instagram_business_account) {
+          instagramBusinessAccount = instagramBusinessData.instagram_business_account;
+          console.log('Instagram OAuth Callback - Cuenta de Instagram Business encontrada:', instagramBusinessAccount);
+        } else {
+          console.log('Instagram OAuth Callback - No se encontró una cuenta de Instagram Business para esta página');
+          
+          // Si no encontramos una cuenta de Instagram Business, intentamos usar la cuenta conectada directamente
+          console.log('Instagram OAuth Callback - Intentando usar la cuenta de Instagram conectada directamente');
+          instagramBusinessAccount = {
+            id: userData.id,
+            username: userData.username
+          };
+          console.log('Instagram OAuth Callback - Usando cuenta de Instagram directamente:', instagramBusinessAccount);
+        }
+      } else {
+        const errorText = await instagramBusinessResponse.text();
+        console.error('Instagram OAuth Callback - Error obteniendo cuenta de Instagram Business:', errorText);
+        
+        // Si hay un error en la API, intentamos usar la cuenta de Instagram conectada directamente
+        console.log('Instagram OAuth Callback - Intentando usar la cuenta conectada directamente debido a error de API');
+        instagramBusinessAccount = {
+          id: userData.id,
+          username: userData.username
+        };
+        console.log('Instagram OAuth Callback - Usando cuenta de Instagram directamente:', instagramBusinessAccount);
+      }
+    } catch (error) {
+      console.error('Instagram OAuth Callback - Error al obtener la cuenta de Instagram Business:', error);
+      
+      // En caso de error, intentamos usar la cuenta de Instagram conectada directamente
+      console.log('Instagram OAuth Callback - Intentando usar la cuenta conectada directamente debido a excepción');
+      instagramBusinessAccount = {
+        id: userData.id,
+        username: userData.username
+      };
+      console.log('Instagram OAuth Callback - Usando cuenta de Instagram directamente:', instagramBusinessAccount);
     }
     
-    const instagramBusinessData = await instagramBusinessResponse.json();
-    console.log('Instagram OAuth Callback - Datos de Instagram Business:', instagramBusinessData);
-    
-    if (!instagramBusinessData.instagram_business_account) {
-      console.error('Instagram OAuth Callback - No se encontró cuenta de Instagram Business');
-      return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/dashboard?error=instagram_no_business_account`);
-    }
+    // Si no tenemos una cuenta de Instagram Business, usamos la que creamos manualmente
+    instagramBusinessData = instagramBusinessData || { instagram_business_account: instagramBusinessAccount };
 
     // Guardar o actualizar el canal en la base de datos
     console.log('Instagram OAuth Callback - Guardando canal en base de datos...');

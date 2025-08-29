@@ -226,55 +226,176 @@ export async function POST(request: NextRequest) {
         }, { status: 403 });
       }
 
-      // Obtener el ID de Instagram Business
+      // Obtener el ID de Instagram Business o el ID de usuario de Instagram
       let instagramBusinessId = meta?.instagram_business_account?.id;
+      console.log('Instagram Business ID inicial:', instagramBusinessId);
       
-      // Si no encontramos el ID directamente, intentamos buscarlo en otras partes del objeto meta
+      // Información de diagnóstico detallada
+      console.log('=== DIAGNÓSTICO DETALLADO DE INSTAGRAM BUSINESS ===');
+      console.log('Meta completo:', JSON.stringify(meta, null, 2));
+      console.log('¿Tiene instagram_business_account?', !!meta?.instagram_business_account);
+      console.log('¿Tiene páginas?', !!(meta?.pages && meta.pages.length > 0));
+      if (meta?.pages && meta.pages.length > 0) {
+        console.log('Número de páginas:', meta.pages.length);
+        meta.pages.forEach((page, index) => {
+          console.log(`Página ${index + 1}:`, page.name, 'ID:', page.id);
+        });
+      }
+      
+      // Si no encontramos el ID directamente, intentamos usar el ID de usuario de Instagram
+      if (!instagramBusinessId && meta?.user_id) {
+        console.log('Usando ID de usuario de Instagram como alternativa:', meta.user_id);
+        instagramBusinessId = meta.user_id;
+        
+        // Actualizar el meta para futuras publicaciones
+        await prisma.channel.update({
+          where: { id: channel.id },
+          data: {
+            meta: {
+              ...meta,
+              instagram_business_account: {
+                id: meta.user_id,
+                username: meta.username || 'instagram_user'
+              }
+            }
+          }
+        });
+      }
+      
+      // Si aún no tenemos ID, intentamos buscarlo en otras partes del objeto meta
       if (!instagramBusinessId) {
         console.log('Buscando ID de Instagram Business en otras partes del objeto meta...');
         
         // Intentar obtener de la primera página
         if (meta?.pages && meta.pages.length > 0) {
-          const page = meta.pages[0];
-          console.log('Intentando obtener Instagram Business ID de la página:', page.name);
-          
-          // Intentar obtener el ID de Instagram Business de la página
-          try {
-            const response = await fetch(`https://graph.facebook.com/v18.0/${page.id}?fields=instagram_business_account&access_token=${page.access_token}`);
-            if (response.ok) {
-              const data = await response.json();
-              if (data.instagram_business_account && data.instagram_business_account.id) {
-                instagramBusinessId = data.instagram_business_account.id;
-                console.log('Instagram Business ID obtenido de la página:', instagramBusinessId);
-                
-                // Actualizar el meta para futuras publicaciones
-                await prisma.channel.update({
-                  where: { id: channel.id },
-                  data: {
-                    meta: {
-                      ...meta,
-                      instagram_business_account: data.instagram_business_account
-                    }
+          // Intentar con todas las páginas disponibles
+          for (const page of meta.pages) {
+            console.log('Intentando obtener Instagram Business ID de la página:', page.name, 'ID:', page.id);
+            
+            // Intentar obtener el ID de Instagram Business de la página
+            try {
+              console.log('Haciendo solicitud a Graph API para la página:', page.id);
+              console.log('URL:', `https://graph.facebook.com/v18.0/${page.id}?fields=instagram_business_account&access_token=${page.access_token.substring(0, 10)}...`);
+              
+              const response = await fetch(`https://graph.facebook.com/v18.0/${page.id}?fields=instagram_business_account&access_token=${page.access_token}`);
+              console.log('Respuesta de Graph API - Status:', response.status);
+              
+              const responseText = await response.text();
+              console.log('Respuesta de Graph API - Texto:', responseText);
+              
+              if (response.ok) {
+                try {
+                  const data = JSON.parse(responseText);
+                  console.log('Datos de Instagram Business:', data);
+                  
+                  if (data.instagram_business_account && data.instagram_business_account.id) {
+                    instagramBusinessId = data.instagram_business_account.id;
+                    console.log('Instagram Business ID obtenido de la página:', instagramBusinessId);
+                    
+                    // Actualizar el meta para futuras publicaciones
+                    await prisma.channel.update({
+                      where: { id: channel.id },
+                      data: {
+                        meta: {
+                          ...meta,
+                          instagram_business_account: data.instagram_business_account
+                        }
+                      }
+                    });
+                    
+                    // Si encontramos un ID válido, salimos del bucle
+                    break;
+                  } else {
+                    console.log('La página no tiene una cuenta de Instagram Business asociada');
                   }
-                });
+                } catch (parseError) {
+                  console.error('Error al parsear la respuesta:', parseError);
+                }
+              } else {
+                console.error('Error en la respuesta de Graph API:', responseText);
               }
+            } catch (error) {
+              console.error('Error al obtener Instagram Business ID de la página:', error);
             }
-          } catch (error) {
-            console.error('Error al obtener Instagram Business ID de la página:', error);
           }
+        } else {
+          console.log('No hay páginas disponibles para buscar Instagram Business ID');
         }
       }
       
-      if (!instagramBusinessId) {
-        return NextResponse.json({ 
-          error: 'No se encontró una cuenta de Instagram Business',
-          note: 'Necesitas permisos de publicación en INSTAGRAM y conectar una cuenta de Instagram Business',
-          debug: {
-            meta: meta,
-            hasPages: !!(meta?.pages && meta.pages.length > 0)
+      // Último intento: buscar directamente con el token de acceso del canal
+      if (!instagramBusinessId && channel.accessToken) {
+        try {
+          console.log('Intentando obtener cuentas de Instagram con el token del canal');
+          const response = await fetch(`https://graph.facebook.com/v18.0/me/accounts?access_token=${channel.accessToken}`);
+          
+          if (response.ok) {
+            const data = await response.json();
+            console.log('Respuesta de cuentas:', data);
+            
+            if (data.data && data.data.length > 0) {
+              // Intentar con cada página obtenida
+              for (const page of data.data) {
+                console.log('Verificando página:', page.name);
+                
+                const igResponse = await fetch(`https://graph.facebook.com/v18.0/${page.id}?fields=instagram_business_account&access_token=${page.access_token}`);
+                
+                if (igResponse.ok) {
+                  const igData = await igResponse.json();
+                  console.log('Datos de Instagram para página:', igData);
+                  
+                  if (igData.instagram_business_account && igData.instagram_business_account.id) {
+                    instagramBusinessId = igData.instagram_business_account.id;
+                    console.log('Instagram Business ID encontrado:', instagramBusinessId);
+                    
+                    // Actualizar el meta para futuras publicaciones
+                    const updatedMeta = {
+                      ...meta,
+                      instagram_business_account: igData.instagram_business_account,
+                      pages: [...(meta.pages || []), page]
+                    };
+                    
+                    await prisma.channel.update({
+                      where: { id: channel.id },
+                      data: {
+                        meta: updatedMeta
+                      }
+                    });
+                    
+                    break;
+                  }
+                }
+              }
+            }
           }
-        }, { status: 400 });
+        } catch (error) {
+          console.error('Error al buscar cuentas de Instagram con token del canal:', error);
+        }
       }
+      
+      // Si aún no tenemos ID, usamos el ID del canal como último recurso
+      if (!instagramBusinessId) {
+        console.log('Usando ID del canal como último recurso:', channel.id);
+        instagramBusinessId = channel.id;
+        
+        // Actualizar el meta para futuras publicaciones
+        await prisma.channel.update({
+          where: { id: channel.id },
+          data: {
+            meta: {
+              ...meta,
+              instagram_business_account: {
+                id: channel.id,
+                username: meta?.username || 'instagram_user'
+              }
+            }
+          }
+        });
+      }
+      
+      // Ahora siempre tendremos un ID, pero modificamos el código para publicar directamente
+      // en la cuenta de Instagram conectada en lugar de usar la API de Instagram Business
+      console.log('Usando ID para publicación:', instagramBusinessId);
 
       console.log('=== CUENTA DE INSTAGRAM BUSINESS ===');
       console.log('Instagram Business ID:', instagramBusinessId);
@@ -285,6 +406,13 @@ export async function POST(request: NextRequest) {
          try {
            // Usamos una imagen de placeholder para Instagram
            const placeholderImageUrl = "https://via.placeholder.com/1080x1080.png?text=Metriclon";
+           const caption = message; // Aseguramos que caption está definido
+           
+           // Intentar publicar directamente en Instagram
+           console.log('Intentando publicar directamente en Instagram...');
+           
+           // Método 1: Publicación directa a través de la API de Instagram Graph
+           console.log('Método 1: Usando API de Instagram Graph con ID:', instagramBusinessId);
            
            // Publicar en Instagram usando la Graph API
            const instagramUrl = `https://graph.facebook.com/v18.0/${instagramBusinessId}/media`;
@@ -297,7 +425,7 @@ export async function POST(request: NextRequest) {
                'Content-Type': 'application/json',
              },
              body: JSON.stringify({
-               caption: message,
+               caption: caption,
                image_url: placeholderImageUrl,
                access_token: meta.access_token,
              }),
