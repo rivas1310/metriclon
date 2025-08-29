@@ -59,7 +59,29 @@ export async function POST(request: NextRequest) {
 
     // Verificar que tenemos permisos de publicación
     const meta = channel.meta as any;
-    const permissions = meta?.permissions || [];
+    // Asegurarnos de que los permisos estén en el formato correcto
+    let permissions = meta?.permissions || [];
+    
+    // Si los permisos están en un formato diferente, intentar extraerlos
+    if (typeof meta?.permissions === 'string') {
+      try {
+        permissions = JSON.parse(meta.permissions);
+      } catch (e) {
+        permissions = meta.permissions.split(',');
+      }
+    }
+    
+    // Forzar los permisos necesarios para Instagram si es un canal de Instagram
+    if (channel.platform === 'INSTAGRAM') {
+      // Asegurarnos de que los permisos necesarios estén incluidos
+      if (!permissions.includes('instagram_basic')) {
+        permissions.push('instagram_basic');
+      }
+      if (!permissions.includes('instagram_content_publish')) {
+        permissions.push('instagram_content_publish');
+      }
+    }
+    
     console.log('=== PERMISOS DEL CANAL ===');
     console.log('Permisos:', permissions);
     console.log('Meta completa:', JSON.stringify(channel.meta, null, 2));
