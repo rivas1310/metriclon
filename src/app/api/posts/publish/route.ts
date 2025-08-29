@@ -217,19 +217,27 @@ export async function POST(request: NextRequest) {
       postId = facebookData.id;
     } 
     else if (channel.platform === 'INSTAGRAM') {
-      // Para Instagram, necesitamos usar la Graph API de Instagram
-      if (!permissions.includes('instagram_basic') || !permissions.includes('instagram_content_publish')) {
-        return NextResponse.json({ 
-          error: 'No tienes permisos para publicar en Instagram',
-          note: 'Necesitas solicitar permisos de instagram_basic e instagram_content_publish en Meta App Review',
-          debug: {
-            permissions: permissions,
-            hasInstagramBasic: permissions.includes('instagram_basic'),
-            hasInstagramContentPublish: permissions.includes('instagram_content_publish'),
-            channelMeta: channel.meta
-          }
-        }, { status: 403 });
-      }
+          // Para Instagram, necesitamos usar la Graph API de Instagram
+    console.log('=== VERIFICANDO PERMISOS DE INSTAGRAM ===');
+    console.log('Permisos disponibles:', permissions);
+    console.log('¿Tiene instagram_basic?', permissions.includes('instagram_basic'));
+    console.log('¿Tiene instagram_content_publish?', permissions.includes('instagram_content_publish'));
+    
+    if (!permissions.includes('instagram_basic') || !permissions.includes('instagram_content_publish')) {
+      console.log('❌ PERMISOS INSUFICIENTES PARA INSTAGRAM');
+      return NextResponse.json({ 
+        error: 'No tienes permisos para publicar en Instagram',
+        note: 'Necesitas solicitar permisos de instagram_basic e instagram_content_publish en Meta App Review',
+        debug: {
+          permissions: permissions,
+          hasInstagramBasic: permissions.includes('instagram_basic'),
+          hasInstagramContentPublish: permissions.includes('instagram_content_publish'),
+          channelMeta: channel.meta
+        }
+      }, { status: 403 });
+    }
+    
+    console.log('✅ PERMISOS DE INSTAGRAM VERIFICADOS');
 
       // Obtener el ID de Instagram Business o el ID de usuario de Instagram
       let instagramBusinessId = meta?.instagram_business_account?.id;

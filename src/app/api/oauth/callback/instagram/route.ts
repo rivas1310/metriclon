@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
         redirect_uri: process.env.INSTAGRAM_REDIRECT_URI!,
         code: code,
         // Aseguramos que estamos solicitando los permisos correctos para Instagram API
-        scope: 'instagram_basic,instagram_content_publish,pages_show_list,pages_read_engagement,business_management',
+        scope: 'instagram_basic,instagram_content_publish',
       }),
     });
 
@@ -195,7 +195,7 @@ export async function GET(request: NextRequest) {
             username: userData.username,
             accountType: userData.account_type,
             accessToken: longLivedTokenData.access_token,
-            permissions: ['instagram_basic', 'instagram_content_publish', 'pages_show_list', 'pages_read_engagement', 'business_management'],
+            permissions: ['instagram_basic', 'instagram_content_publish'],
             instagram_business_account: instagramBusinessData.instagram_business_account,
             pages: [
               {
@@ -225,7 +225,7 @@ export async function GET(request: NextRequest) {
             username: userData.username,
             accountType: userData.account_type,
             accessToken: longLivedTokenData.access_token,
-            permissions: ['instagram_basic', 'instagram_content_publish', 'pages_show_list', 'pages_read_engagement', 'business_management'],
+            permissions: ['instagram_basic', 'instagram_content_publish'],
             instagram_business_account: instagramBusinessData.instagram_business_account,
             pages: [
               {
