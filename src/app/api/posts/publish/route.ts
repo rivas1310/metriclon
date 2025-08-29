@@ -227,9 +227,53 @@ export async function POST(request: NextRequest) {
       }
 
       // Obtener el ID de Instagram Business
-      const instagramBusinessId = meta?.instagram_business_account?.id;
+      let instagramBusinessId = meta?.instagram_business_account?.id;
+      
+      // Si no encontramos el ID directamente, intentamos buscarlo en otras partes del objeto meta
       if (!instagramBusinessId) {
-        return NextResponse.json({ error: 'No se encontró una cuenta de Instagram Business' }, { status: 400 });
+        console.log('Buscando ID de Instagram Business en otras partes del objeto meta...');
+        
+        // Intentar obtener de la primera página
+        if (meta?.pages && meta.pages.length > 0) {
+          const page = meta.pages[0];
+          console.log('Intentando obtener Instagram Business ID de la página:', page.name);
+          
+          // Intentar obtener el ID de Instagram Business de la página
+          try {
+            const response = await fetch(`https://graph.facebook.com/v18.0/${page.id}?fields=instagram_business_account&access_token=${page.access_token}`);
+            if (response.ok) {
+              const data = await response.json();
+              if (data.instagram_business_account && data.instagram_business_account.id) {
+                instagramBusinessId = data.instagram_business_account.id;
+                console.log('Instagram Business ID obtenido de la página:', instagramBusinessId);
+                
+                // Actualizar el meta para futuras publicaciones
+                await prisma.channel.update({
+                  where: { id: channel.id },
+                  data: {
+                    meta: {
+                      ...meta,
+                      instagram_business_account: data.instagram_business_account
+                    }
+                  }
+                });
+              }
+            }
+          } catch (error) {
+            console.error('Error al obtener Instagram Business ID de la página:', error);
+          }
+        }
+      }
+      
+      if (!instagramBusinessId) {
+        return NextResponse.json({ 
+          error: 'No se encontró una cuenta de Instagram Business',
+          note: 'Necesitas permisos de publicación en INSTAGRAM y conectar una cuenta de Instagram Business',
+          debug: {
+            meta: meta,
+            hasPages: !!(meta?.pages && meta.pages.length > 0)
+          }
+        }, { status: 400 });
       }
 
       console.log('=== CUENTA DE INSTAGRAM BUSINESS ===');
