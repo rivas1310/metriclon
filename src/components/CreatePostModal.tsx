@@ -30,12 +30,19 @@ export function CreatePostModal({ isOpen, onClose, organizationId, channels, onP
     setIsLoading(true);
     setError('');
 
-    // Validar que se haya seleccionado una plataforma
-    if (formData.platforms.length === 0) {
-      setError('Debes seleccionar al menos una plataforma');
-      setIsLoading(false);
-      return;
-    }
+         // Validar que se haya seleccionado una plataforma
+     if (formData.platforms.length === 0) {
+       setError('Debes seleccionar al menos una plataforma');
+       setIsLoading(false);
+       return;
+     }
+
+     // Validar que Instagram tenga contenido multimedia
+     if (formData.platforms.includes('INSTAGRAM') && formData.images.length === 0) {
+       setError('Instagram requiere una imagen o video para publicar. Los posts solo de texto no son soportados.');
+       setIsLoading(false);
+       return;
+     }
 
     try {
       // Intentar publicación real primero (Facebook e Instagram)
@@ -302,31 +309,37 @@ export function CreatePostModal({ isOpen, onClose, organizationId, channels, onP
             </div>
           </div>
 
-          {/* Imágenes */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              <Image className="h-4 w-4 inline mr-2" />
-              Imágenes
-            </label>
-            <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-              <input
-                type="file"
-                multiple
-                accept="image/*"
-                onChange={handleImageUpload}
-                className="hidden"
-                id="image-upload"
-              />
-              <label htmlFor="image-upload" className="cursor-pointer">
-                <Image className="h-12 w-12 text-gray-400 mx-auto mb-2" />
-                <p className="text-sm text-gray-600">
-                  Haz clic para subir imágenes o arrastra y suelta
-                </p>
-                <p className="text-xs text-gray-500 mt-1">
-                  PNG, JPG hasta 10MB
-                </p>
-              </label>
-            </div>
+                     {/* Imágenes */}
+           <div>
+             <label className="block text-sm font-medium text-gray-700 mb-2">
+               <Image className="h-4 w-4 inline mr-2" />
+               Imágenes {formData.platforms.includes('INSTAGRAM') && <span className="text-red-500">*</span>}
+             </label>
+             <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+               <input
+                 type="file"
+                 multiple
+                 accept="image/*,video/*"
+                 onChange={handleImageUpload}
+                 className="hidden"
+                 id="image-upload"
+                 required={formData.platforms.includes('INSTAGRAM')}
+               />
+               <label htmlFor="image-upload" className="cursor-pointer">
+                 <Image className="h-12 w-12 text-gray-400 mx-auto mb-2" />
+                 <p className="text-sm text-gray-600">
+                   Haz clic para subir imágenes o arrastra y suelta
+                 </p>
+                 <p className="text-xs text-gray-500 mt-1">
+                   PNG, JPG, WebP, MP4, AVI, MOV hasta 10MB
+                 </p>
+                 {formData.platforms.includes('INSTAGRAM') && (
+                   <p className="text-xs text-red-500 mt-1 font-medium">
+                     ⚠️ Instagram requiere una imagen o video
+                   </p>
+                 )}
+               </label>
+             </div>
             
             {/* Imágenes subidas */}
             {formData.images.length > 0 && (
@@ -393,12 +406,12 @@ export function CreatePostModal({ isOpen, onClose, organizationId, channels, onP
             >
               Cancelar
             </button>
-            <button
-              type="button"
-              onClick={() => handleSubmit({ preventDefault: () => {} } as any, 'now')}
-              disabled={isLoading || formData.platforms.length === 0}
-              className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
-            >
+                         <button
+               type="button"
+               onClick={() => handleSubmit({ preventDefault: () => {} } as any, 'now')}
+               disabled={isLoading || formData.platforms.length === 0 || (formData.platforms.includes('INSTAGRAM') && formData.images.length === 0)}
+               className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
+             >
               {isLoading ? (
                 <div className="flex items-center">
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
@@ -411,11 +424,11 @@ export function CreatePostModal({ isOpen, onClose, organizationId, channels, onP
                 </>
               )}
             </button>
-            <button
-              type="submit"
-              disabled={isLoading || formData.platforms.length === 0}
-              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
-            >
+                         <button
+               type="submit"
+               disabled={isLoading || formData.platforms.length === 0 || (formData.platforms.includes('INSTAGRAM') && formData.images.length === 0)}
+               className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
+             >
               {isLoading ? (
                 <div className="flex items-center">
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
