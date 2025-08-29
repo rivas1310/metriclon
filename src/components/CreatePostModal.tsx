@@ -60,14 +60,38 @@ export function CreatePostModal({ isOpen, onClose, organizationId, channels, onP
         const publishResponse = await fetch('/api/posts/publish', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            organizationId,
-            channelId: selectedChannel.id,
-            caption: formData.content, // Cambiar content por caption para Instagram
-            type: 'TEXT',
-            scheduledFor: publishType === 'now' ? null : formData.scheduledFor || null,
-            platform: selectedChannel.platform // Añadir plataforma para diferenciar en el backend
-          }),
+                  // Para Instagram, necesitamos enviar FormData si hay imágenes
+        if (selectedChannel.platform === 'INSTAGRAM' && formData.images.length > 0) {
+          const formDataToSend = new FormData();
+          formDataToSend.append('organizationId', organizationId);
+          formDataToSend.append('channelId', selectedChannel.id);
+          formDataToSend.append('caption', formData.content);
+          formDataToSend.append('type', 'TEXT');
+          formDataToSend.append('scheduledFor', publishType === 'now' ? '' : (formData.scheduledFor || ''));
+          formDataToSend.append('platform', selectedChannel.platform);
+          formDataToSend.append('media', formData.images[0]); // Usar la primera imagen
+          
+          const response = await fetch('/api/posts/publish', {
+            method: 'POST',
+            body: formDataToSend,
+          });
+        } else {
+          // Para Facebook o Instagram sin imágenes, usar JSON
+          const response = await fetch('/api/posts/publish', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              organizationId,
+              channelId: selectedChannel.id,
+              caption: formData.content,
+              type: 'TEXT',
+              scheduledFor: publishType === 'now' ? null : formData.scheduledFor || null,
+              platform: selectedChannel.platform
+            }),
+          });
+        }
         });
 
         if (publishResponse.ok) {

@@ -2,6 +2,17 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
+// Función para convertir archivos a URLs que Instagram pueda acceder
+async function convertFileToUrl(file: File): Promise<string> {
+  // Por ahora, usamos una imagen de placeholder como fallback
+  // En producción, deberías subir el archivo a un servicio como AWS S3, Cloudinary, etc.
+  console.log('Convirtiendo archivo a URL:', file.name, file.type, file.size);
+  
+  // TODO: Implementar subida real a servicio de almacenamiento
+  // Por ahora, retornamos una imagen de Unsplash como ejemplo
+  return "https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?w=1080&h=1080&fit=crop&crop=center";
+}
+
 export async function POST(request: NextRequest) {
   try {
     const token = request.cookies.get('auth-token')?.value;
@@ -14,8 +25,27 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Token inválido' }, { status: 401 });
     }
 
-    const reqData = await request.json();
-    const { organizationId, channelId, content, caption, type = 'TEXT', scheduledFor = null, platform } = reqData;
+         // Para Instagram, necesitamos manejar tanto JSON como FormData
+     let reqData;
+     let mediaFile: File | null = null;
+     
+     if (request.headers.get('content-type')?.includes('multipart/form-data')) {
+       const formData = await request.formData();
+       reqData = {
+         organizationId: formData.get('organizationId') as string,
+         channelId: formData.get('channelId') as string,
+         content: formData.get('content') as string,
+         caption: formData.get('caption') as string,
+         type: formData.get('type') as string || 'TEXT',
+         scheduledFor: formData.get('scheduledFor') as string || null,
+         platform: formData.get('platform') as string
+       };
+       mediaFile = formData.get('media') as File || null;
+     } else {
+       reqData = await request.json();
+     }
+     
+     const { organizationId, channelId, content, caption, type = 'TEXT', scheduledFor = null, platform } = reqData;
     
     // Inicializar variables para evitar errores de "used before declaration"
     let post = null;
@@ -416,11 +446,45 @@ export async function POST(request: NextRequest) {
        console.log('Access Token completo:', meta?.access_token);
        console.log('Access Token del canal:', channel.accessToken);
 
-      // Para Instagram, necesitamos usar la API correcta según la documentación
-      try {
-        // Usamos una imagen de placeholder para Instagram
-        const placeholderImageUrl = "https://via.placeholder.com/1080x1080.png?text=Metriclon";
-        const caption = message; // Aseguramos que caption está definido
+             // Para Instagram, necesitamos usar la API correcta según la documentación
+       try {
+         // Determinar si tenemos contenido multimedia o solo texto
+         const hasMedia = mediaFile && mediaFile.size > 0;
+         console.log('=== CONTENIDO MULTIMEDIA ===');
+         console.log('¿Tiene archivo de media?', hasMedia);
+         console.log('Tipo de archivo:', mediaFile?.type);
+         console.log('Tamaño del archivo:', mediaFile?.size);
+         
+         if (!hasMedia) {
+           console.log('Solo texto - publicando sin imagen');
+           // Para posts solo de texto, usamos el endpoint de stories o feed
+           // Instagram requiere contenido multimedia, así que guardamos como borrador
+           return NextResponse.json({
+             success: false,
+             error: 'Instagram requiere contenido multimedia (imagen o video)',
+             status: 'draft_saved',
+             note: 'Los posts solo de texto no son soportados por Instagram API. Sube una imagen o video.',
+             instructions: [
+               'Para publicar en Instagram necesitas:',
+               '1. Subir una imagen o video',
+               '2. Agregar un caption (opcional)',
+               '3. Instagram no soporta posts solo de texto'
+             ]
+           }, { status: 400 });
+         }
+         
+         // Validar tipo de archivo
+         const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'video/mp4', 'video/avi', 'video/mov'];
+         if (!allowedTypes.includes(mediaFile.type)) {
+           return NextResponse.json({
+             success: false,
+             error: 'Tipo de archivo no soportado',
+             note: 'Instagram solo acepta: JPEG, PNG, WebP, MP4, AVI, MOV',
+             receivedType: mediaFile.type
+           }, { status: 400 });
+         }
+         
+         console.log('Archivo válido - procediendo con publicación');
         
         console.log('Intentando publicar en Instagram usando la API oficial...');
         
@@ -474,20 +538,21 @@ export async function POST(request: NextRequest) {
        if (igId) {
           console.log('Publicando en Instagram con ID:', igId);
           
-          // Primero creamos el contenedor de medios
-          const mediaUrl = 'https://graph.instagram.com/v18.0/' + igId + '/media';
-          console.log('URL para crear media:', mediaUrl);
-          
-          const mediaResponse = await fetch(mediaUrl, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-                       body: JSON.stringify({
-             image_url: placeholderImageUrl,
-             caption: message, // Usar el mensaje preparado (caption || content)
-             access_token: meta.access_token || channel.accessToken, // Usar el token del canal como fallback
-           }),
+                     // Primero creamos el contenedor de medios
+           const mediaUrl = 'https://graph.instagram.com/v18.0/' + igId + '/media';
+           console.log('URL para crear media:', mediaUrl);
+           
+           // Convertir el archivo a base64 o subirlo a un servicio de almacenamiento
+           // Por ahora, usamos un enfoque simple con FormData
+           const formData = new FormData();
+           formData.append('image_url', await convertFileToUrl(mediaFile));
+           formData.append('caption', message);
+           formData.append('access_token', meta.access_token || channel.accessToken);
+           
+           const mediaResponse = await fetch(mediaUrl, {
+             method: 'POST',
+             body: formData,
+           });
           });
           
           const mediaResponseText = await mediaResponse.text();
@@ -554,17 +619,17 @@ export async function POST(request: NextRequest) {
               console.log('Intentando publicar a través de Facebook como alternativa...');
               const page = meta.pages[0];
               
-              const fbPostUrl = `https://graph.facebook.com/v18.0/${page.id}/photos`;
-              const fbPostResponse = await fetch(fbPostUrl, {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-                            body: JSON.stringify({
-              url: placeholderImageUrl,
-              caption: message, // Usar el mensaje preparado (caption || content)
-              access_token: page.access_token,
-            }),
+                             const fbPostUrl = `https://graph.facebook.com/v18.0/${page.id}/photos`;
+               const fbPostResponse = await fetch(fbPostUrl, {
+                 method: 'POST',
+                 headers: {
+                   'Content-Type': 'application/json',
+                 },
+                 body: JSON.stringify({
+                   url: placeholderImageUrl,
+                   caption: message, // Usar el mensaje preparado (caption || content)
+                   access_token: page.access_token,
+                 }),
               });
               
               const fbResponseText = await fbPostResponse.text();
