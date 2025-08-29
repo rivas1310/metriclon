@@ -538,8 +538,32 @@ export async function POST(request: NextRequest) {
        if (igId) {
           console.log('Publicando en Instagram con ID:', igId);
           
-                     // Primero creamos el contenedor de medios
-           const mediaUrl = 'https://graph.instagram.com/v18.0/' + igId + '/media';
+          // Crear el post en la base de datos ANTES de publicar en Instagram
+          console.log('=== CREANDO POST EN BASE DE DATOS ===');
+          post = await prisma.post.create({
+            data: {
+              organizationId: reqData.organizationId,
+              channelId: reqData.channelId,
+              caption: reqData.caption || reqData.content,
+              type: reqData.type,
+              status: 'DRAFT', // Inicialmente como borrador
+              scheduledAt: reqData.scheduledFor ? new Date(reqData.scheduledFor) : null,
+              publishedAt: null,
+              externalPostId: '',
+              createdBy: decoded.userId,
+              meta: {
+                platform: channel.platform,
+                channelName: channel.name,
+                isRealPost: true
+              }
+            }
+          });
+          
+          postId = post.id;
+          console.log('Post creado en base de datos con ID:', postId);
+          
+          // Primero creamos el contenedor de medios
+          const mediaUrl = 'https://graph.instagram.com/v18.0/' + igId + '/media';
            console.log('URL para crear media:', mediaUrl);
            
            // Convertir el archivo a base64 o subirlo a un servicio de almacenamiento
