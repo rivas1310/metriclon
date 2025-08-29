@@ -11,12 +11,17 @@ async function convertFileToUrl(file: File): Promise<string> {
     console.log('Tipo:', file.type);
     console.log('Tamaño:', file.size, 'bytes');
     
-    // Configurar Cloudinary
-    cloudinary.config({
-      cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-      api_key: process.env.CLOUDINARY_API_KEY,
-      api_secret: process.env.CLOUDINARY_API_SECRET,
-    });
+         // Configurar Cloudinary
+     console.log('=== CONFIGURANDO CLOUDINARY ===');
+     console.log('Cloud Name:', process.env.CLOUDINARY_CLOUD_NAME ? '✅ Configurado' : '❌ No configurado');
+     console.log('API Key:', process.env.CLOUDINARY_API_KEY ? '✅ Configurado' : '❌ No configurado');
+     console.log('API Secret:', process.env.CLOUDINARY_API_SECRET ? '✅ Configurado' : '❌ No configurado');
+     
+     cloudinary.config({
+       cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+       api_key: process.env.CLOUDINARY_API_KEY,
+       api_secret: process.env.CLOUDINARY_API_SECRET,
+     });
     
     // Generar nombre único para el archivo
     const timestamp = Date.now();
@@ -615,12 +620,20 @@ export async function POST(request: NextRequest) {
           const mediaUrl = 'https://graph.instagram.com/v18.0/' + igId + '/media';
            console.log('URL para crear media:', mediaUrl);
            
-           // Convertir el archivo a base64 o subirlo a un servicio de almacenamiento
-           // Por ahora, usamos un enfoque simple con FormData
-           const formData = new FormData();
-           formData.append('image_url', await convertFileToUrl(mediaFile));
-           formData.append('caption', message);
-           formData.append('access_token', meta.access_token || channel.accessToken);
+                       // Convertir el archivo a base64 o subirlo a un servicio de almacenamiento
+            // Por ahora, usamos un enfoque simple con FormData
+            console.log('=== PREPARANDO ARCHIVO PARA INSTAGRAM ===');
+            console.log('Archivo recibido:', mediaFile);
+            console.log('Tamaño del archivo:', mediaFile?.size);
+            console.log('Tipo del archivo:', mediaFile?.type);
+            
+            const imageUrl = await convertFileToUrl(mediaFile);
+            console.log('URL obtenida de Cloudinary:', imageUrl);
+            
+            const formData = new FormData();
+            formData.append('image_url', imageUrl);
+            formData.append('caption', message);
+            formData.append('access_token', meta.access_token || channel.accessToken);
            
                        const mediaResponse = await fetch(mediaUrl, {
               method: 'POST',
