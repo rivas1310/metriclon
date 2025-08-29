@@ -14,7 +14,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Token inválido' }, { status: 401 });
     }
 
-    const { organizationId, channelId, content, type = 'TEXT', scheduledFor = null, platform } = await request.json();
+    const reqData = await request.json();
+    const { organizationId, channelId, content, type = 'TEXT', scheduledFor = null, platform } = reqData;
+    
+    // Inicializar variables para evitar errores de "used before declaration"
+    let post = null;
+    let postId = null;
 
     console.log('=== INICIO DE PUBLICACIÓN ===');
     console.log('Organization ID:', organizationId);
@@ -89,7 +94,6 @@ export async function POST(request: NextRequest) {
     // Preparar el mensaje
     const message = content;
     const publishData: any = { message };
-    let postId = null;
     
     if (channel.platform === 'FACEBOOK') {
       if (!permissions.includes('pages_manage_posts')) {
@@ -401,88 +405,224 @@ export async function POST(request: NextRequest) {
       console.log('Instagram Business ID:', instagramBusinessId);
       console.log('Access Token presente:', !!meta?.access_token);
 
-      // Para Instagram, necesitamos un enfoque diferente ya que parece ser una cuenta personal
+      // Para Instagram, necesitamos usar la API correcta según la documentación
       try {
         // Usamos una imagen de placeholder para Instagram
         const placeholderImageUrl = "https://via.placeholder.com/1080x1080.png?text=Metriclon";
         const caption = message; // Aseguramos que caption está definido
         
-        console.log('Detectada cuenta personal de Instagram. Usando enfoque alternativo...');
+        console.log('Intentando publicar en Instagram usando la API oficial...');
         
-        // Verificar si tenemos páginas de Facebook conectadas
-        if (meta?.pages && meta.pages.length > 0) {
-          // Intentar publicar a través de una página de Facebook conectada
-          const page = meta.pages[0];
-          console.log('Intentando publicar a través de la página de Facebook:', page.name);
+        // Primero verificamos si tenemos un ID de usuario de Instagram
+        if (!meta?.user_id && !instagramBusinessId) {
+          console.log('Obteniendo ID de usuario de Instagram...');
           
-          // Publicar en la página de Facebook
-          const fbPostUrl = `https://graph.facebook.com/v18.0/${page.id}/photos`;
-          console.log('URL de publicación en Facebook:', fbPostUrl);
+          // Intentar obtener el ID de usuario de Instagram usando el endpoint /me
+          const meResponse = await fetch('https://graph.instagram.com/v18.0/me?fields=id,username,account_type', {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${meta.access_token}`
+            }
+          });
           
-          const fbPostResponse = await fetch(fbPostUrl, {
+          const meData = await meResponse.json();
+          console.log('Respuesta de /me:', meData);
+          
+          if (meData.id) {
+            // Guardar el ID de usuario para futuras publicaciones
+            instagramBusinessId = meData.id;
+            
+            // Actualizar el objeto meta del canal
+            const updatedMeta = {
+              ...meta,
+              user_id: meData.id,
+              username: meData.username,
+              account_type: meData.account_type
+            };
+            
+            await prisma.channel.update({
+              where: { id: channel.id },
+              data: { meta: updatedMeta }
+            });
+            
+            console.log('ID de usuario de Instagram actualizado:', meData.id);
+          } else {
+            console.error('No se pudo obtener el ID de usuario de Instagram');
+          }
+        }
+        
+        // Usar el ID de Instagram que tengamos disponible
+        const igId = meta?.user_id || instagramBusinessId;
+        
+        if (igId) {
+          console.log('Publicando en Instagram con ID:', igId);
+          
+          // Primero creamos el contenedor de medios
+          const mediaUrl = 'https://graph.instagram.com/v18.0/' + igId + '/media';
+          console.log('URL para crear media:', mediaUrl);
+          
+          const mediaResponse = await fetch(mediaUrl, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              url: placeholderImageUrl,
+              image_url: placeholderImageUrl,
               caption: caption,
-              access_token: page.access_token,
+              access_token: meta.access_token,
             }),
           });
           
-          const fbResponseText = await fbPostResponse.text();
-          console.log('=== RESPUESTA DE FACEBOOK ===');
-          console.log('Status:', fbPostResponse.status);
-          console.log('Response Body:', fbResponseText);
+          const mediaResponseText = await mediaResponse.text();
+          console.log('=== RESPUESTA DE INSTAGRAM (MEDIA) ===');
+          console.log('Status:', mediaResponse.status);
+          console.log('Response Body:', mediaResponseText);
           
-          if (fbPostResponse.ok) {
+          if (mediaResponse.ok) {
             try {
-              const fbData = JSON.parse(fbResponseText);
-              console.log('Publicación en Facebook exitosa:', fbData);
+              const mediaData = JSON.parse(mediaResponseText);
               
-              // Guardar la publicación en la base de datos
-              await prisma.post.update({
-                where: { id: post.id },
-                data: {
-                  status: 'published',
-                  publishedAt: new Date(),
-                  externalId: fbData.id,
-                  externalUrl: `https://facebook.com/${fbData.id}`,
+              if (mediaData.id) {
+                // Ahora publicamos el media
+                const publishUrl = 'https://graph.instagram.com/v18.0/' + igId + '/media_publish';
+                console.log('URL para publicar media:', publishUrl);
+                
+                const publishResponse = await fetch(publishUrl, {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify({
+                    creation_id: mediaData.id,
+                    access_token: meta.access_token,
+                  }),
+                });
+                
+                const publishResponseText = await publishResponse.text();
+                console.log('=== RESPUESTA DE INSTAGRAM (PUBLISH) ===');
+                console.log('Status:', publishResponse.status);
+                console.log('Response Body:', publishResponseText);
+                
+                if (publishResponse.ok) {
+                  const publishData = JSON.parse(publishResponseText);
+                  
+                  // Actualizar el post en la base de datos
+                  await prisma.post.update({
+                    where: { id: postId },
+                    data: {
+                      status: "PUBLISHED", // Usando el enum correcto
+                      publishedAt: new Date(),
+                      externalPostId: publishData.id,
+                    }
+                  });
+                  
+                  return NextResponse.json({
+                    success: true,
+                    message: 'Publicación realizada en Instagram',
+                    postId: publishData.id,
+                    platform: 'instagram'
+                  });
+                } else {
+                  throw new Error(`Error al publicar en Instagram: ${publishResponseText}`);
                 }
-              });
-              
-              return NextResponse.json({
-                success: true,
-                message: 'Publicación realizada en Facebook (alternativa a Instagram)',
-                postId: fbData.id,
-                platform: 'facebook',
-                note: 'Tu cuenta de Instagram es una cuenta personal. Para publicar directamente en Instagram, necesitas convertirla a una cuenta Business y conectarla a una página de Facebook.'
-              });
+              } else {
+                throw new Error('No se recibió ID del media');
+              }
             } catch (parseError) {
-              console.error('Error al parsear respuesta de Facebook:', parseError);
+              throw new Error(`Error al procesar respuesta: ${parseError.message}`);
             }
           } else {
-            console.error('Error al publicar en Facebook:', fbResponseText);
+            // Si falla la publicación directa en Instagram, intentamos con Facebook como alternativa
+            if (meta?.pages && meta.pages.length > 0) {
+              console.log('Intentando publicar a través de Facebook como alternativa...');
+              const page = meta.pages[0];
+              
+              const fbPostUrl = `https://graph.facebook.com/v18.0/${page.id}/photos`;
+              const fbPostResponse = await fetch(fbPostUrl, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  url: placeholderImageUrl,
+                  caption: caption,
+                  access_token: page.access_token,
+                }),
+              });
+              
+              const fbResponseText = await fbPostResponse.text();
+              console.log('=== RESPUESTA DE FACEBOOK ===');
+              console.log('Status:', fbPostResponse.status);
+              console.log('Response Body:', fbResponseText);
+              
+              if (fbPostResponse.ok) {
+                const fbData = JSON.parse(fbResponseText);
+                
+                // Actualizar el post en la base de datos
+                  await prisma.post.update({
+                    where: { id: postId },
+                    data: {
+                      status: "PUBLISHED", // Usando el enum correcto
+                      publishedAt: new Date(),
+                      externalPostId: fbData.id,
+                    }
+                  });
+                
+                return NextResponse.json({
+                  success: true,
+                  message: 'Publicación realizada en Facebook (alternativa a Instagram)',
+                  postId: fbData.id,
+                  platform: 'facebook',
+                  note: 'No se pudo publicar directamente en Instagram. Se publicó en Facebook como alternativa.'
+                });
+              }
+            }
+            
+            // Analizar el error de Instagram para dar un mensaje más claro
+            let errorMessage = 'Error al crear media en Instagram';
+            let errorDetails: any = {};
+            
+            try {
+              const errorData = JSON.parse(mediaResponseText);
+              errorMessage = errorData.error?.message || errorMessage;
+              errorDetails = errorData.error || {};
+              
+              // Verificar si el error es por falta de cuenta Business
+              if (errorMessage.includes('professional account') || 
+                  errorMessage.includes('business account') ||
+                  errorMessage.includes('creator account')) {
+                
+                errorMessage = 'Se requiere una cuenta profesional de Instagram (Business o Creator)';
+                errorDetails.solution = 'Convierte tu cuenta de Instagram a una cuenta profesional';
+              }
+            } catch (e) {
+              // Si no podemos parsear el error, usamos el mensaje genérico
+            }
+            
+            throw new Error(errorMessage);
           }
+        } else {
+          throw new Error('No se pudo determinar el ID de usuario de Instagram');
         }
+      } catch (error) {
+        console.error('Error al publicar en Instagram:', error);
         
-        // Si no podemos publicar a través de Facebook, guardamos como borrador y damos instrucciones
+        // Guardar como borrador
         await prisma.post.update({
-          where: { id: post.id },
+          where: { id: postId },
           data: {
-            status: 'draft',
+            status: "DRAFT", // Usando el enum correcto
             publishedAt: null,
           }
         });
         
         return NextResponse.json({
-          error: 'No se puede publicar en Instagram con una cuenta personal',
+          error: error.message || 'Error al publicar en Instagram',
           status: 'draft_saved',
           instructions: [
             'Para publicar en Instagram a través de la API, necesitas:',
-            '1. Convertir tu cuenta de Instagram a una cuenta Business',
-            '2. Conectar tu cuenta de Instagram Business a una página de Facebook',
+            '1. Asegurarte de tener una cuenta profesional de Instagram (Business o Creator)',
+            '2. Verificar que has concedido los permisos: instagram_basic, instagram_content_publish',
             '3. Reconectar tu cuenta en la aplicación'
           ],
           links: [
@@ -492,51 +632,38 @@ export async function POST(request: NextRequest) {
             }
           ]
         }, { status: 400 });
-        
-      } catch (error) {
-        console.error('Error general al publicar:', error);
-        
-        return NextResponse.json({
-          error: 'Error general al publicar',
-          message: error.message,
-          stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
-        }, { status: 500 });
-      }
-
-        console.log('✅ Post creado en Instagram con ID:', publishData.id);
-        postId = publishData.id;
-      } catch (error) {
-        console.error('Error publicando en Instagram:', error);
-        return NextResponse.json({
-          error: 'Error al publicar en Instagram',
-          details: error.message
-        }, { status: 500 });
       }
     }
 
-    // Crear el post en nuestra base de datos
-    console.log('=== GUARDANDO POST EN BASE DE DATOS ===');
-    
-    const post = await prisma.post.create({
-      data: {
-        organizationId,
-        channelId,
-        caption: content,
-        type,
-        status: scheduledFor && new Date(scheduledFor) > new Date() ? 'SCHEDULED' : 'PUBLISHED',
-        scheduledAt: scheduledFor ? new Date(scheduledFor) : null,
-        publishedAt: scheduledFor && new Date(scheduledFor) > new Date() ? null : new Date(),
-        externalPostId: postId || '',
-        createdBy: decoded.userId,
-        meta: {
-          externalPostId: postId,
-          isRealPost: true,
-          platform: channel.platform,
-          channelName: channel.name,
-          publishData: publishData
-        },
-      },
-    });
+    if (postId) {
+      console.log('✅ Post creado en Instagram con ID:', postId);
+    }
+
+    // Crear el post en nuestra base de datos si aún no existe
+    if (!post) {
+      console.log('=== GUARDANDO POST EN BASE DE DATOS ===');
+      
+      post = await prisma.post.create({
+        data: {
+          organizationId: reqData.organizationId,
+          channelId: reqData.channelId,
+          caption: reqData.content,
+          type: reqData.type,
+          status: reqData.scheduledFor && new Date(reqData.scheduledFor) > new Date() ? 'SCHEDULED' : 'PUBLISHED',
+          scheduledAt: reqData.scheduledFor ? new Date(reqData.scheduledFor) : null,
+          publishedAt: reqData.scheduledFor && new Date(reqData.scheduledFor) > new Date() ? null : new Date(),
+          externalPostId: postId || '',
+          createdBy: decoded.userId,
+          meta: {
+            externalPostId: postId,
+            isRealPost: true,
+            platform: channel.platform,
+            channelName: channel.name,
+            publishData: postId ? { id: postId } : undefined
+          }
+        }
+      });
+    }
 
     console.log('✅ Post guardado en base de datos:', post.id);
 

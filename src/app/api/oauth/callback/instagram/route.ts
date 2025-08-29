@@ -53,6 +53,8 @@ export async function GET(request: NextRequest) {
         grant_type: 'authorization_code',
         redirect_uri: process.env.INSTAGRAM_REDIRECT_URI!,
         code: code,
+        // Aseguramos que estamos solicitando los permisos correctos para Instagram API
+        scope: 'instagram_basic,instagram_content_publish,pages_show_list,pages_read_engagement,business_management',
       }),
     });
 
