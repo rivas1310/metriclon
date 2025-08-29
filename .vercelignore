@@ -1,94 +1,35 @@
-# Archivos de desarrollo
-.env.local
-.env.development
-.env.test
-.env
+# Ignorar todo por defecto
+*
 
-# Archivos de build local
+# Permitir solo lo necesario
+!src/
+!public/
+!prisma/schema.prisma
+!next.config.js
+!package.json
+!package-lock.json
+!tsconfig.json
+!postcss.config.js
+!tailwind.config.js
+!next-env.d.ts
+
+# Ignorar específicamente estos directorios y archivos
+node_modules
 .next
-out
-dist
-build
-
-# Archivos de sistema
+.git
+.github
+.vscode
+.idea
 .DS_Store
-Thumbs.db
-desktop.ini
-
-# Logs
 *.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-lerna-debug.log*
-
-# Archivos temporales
-*.tmp
-*.temp
+*.lock
 *.swp
 *.swo
 *~
-
-# Archivos de IDE
-.vscode
-.idea
-*.sublime-*
-.atom
-.brackets.json
-
-# Archivos de Git
-.git
-.gitignore
-.gitattributes
-
-# Archivos de Prisma (se generarán en Vercel)
-prisma/migrations
-prisma/seed.ts
-prisma/seed.js
-
-# Archivos de Docker
-docker-compose.yml
-
-# Archivos que pueden causar problemas de recursión
-node_modules/.cache
+.env
+.env.*
 .vercel
-ssl
+ssl/
+docker-compose.yml
 Dockerfile
 .dockerignore
-
-# Archivos de testing
-coverage
-.nyc_output
-test-results
-.jest
-coverage.json
-
-# Archivos de cache
-.cache
-.parcel-cache
-.eslintcache
-.stylelintcache
-
-# Archivos de dependencias
-node_modules/.cache
-.npm
-.yarn
-
-# Archivos de build tools
-.turbo
-.vercel
-.vercel_build_output
-
-# Archivos de TypeScript
-*.tsbuildinfo
-.tscache
-
-# Archivos de Next.js
-.next/cache
-.next/server
-.next/static
-
-# Archivos de desarrollo específicos
-README.md
-GETTING_STARTED.md
-*.md
