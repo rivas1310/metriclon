@@ -1,24 +1,24 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Configuración básica
   reactStrictMode: true,
   swcMinify: true,
-  
-  // Ignorar errores durante la compilación
   typescript: {
+    // Ignora errores de TypeScript durante la compilación
     ignoreBuildErrors: true,
   },
   eslint: {
+    // Ignora errores de ESLint durante la compilación
     ignoreDuringBuilds: true,
   },
-  
-  // Optimización de imágenes
-  images: {
-    unoptimized: true,
+  // Ignora errores de módulos no encontrados
+  webpack: (config) => {
+    config.resolve.fallback = { fs: false, net: false, tls: false };
+    return config;
   },
-  
-  // Configuración para Vercel
-  output: 'standalone',
+  experimental: {
+    // Permite importaciones más flexibles
+    esmExternals: 'loose',
+  }
 };
 
 module.exports = nextConfig;

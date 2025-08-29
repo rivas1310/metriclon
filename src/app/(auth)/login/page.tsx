@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Eye, EyeOff, Mail, Lock, Zap, CheckCircle } from 'lucide-react';
 import Link from 'next/link';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '../../../hooks/useAuth';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');

@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Eye, EyeOff, Mail, Lock, User, Building, Zap } from 'lucide-react';
 import Link from 'next/link';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '../../../hooks/useAuth';
 
 export default function RegisterPage() {
   const [formData, setFormData] = useState({

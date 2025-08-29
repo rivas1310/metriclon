@@ -7,14 +7,32 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "vercel-build": "prisma generate && next build"
+    "vercel-build": "prisma generate && next build",
+    "dev:quick": "NODE_OPTIONS='--max-old-space-size=4096' next dev --turbo"
   },
   "dependencies": {
-    "@prisma/client": "^5.7.0",
+    "@prisma/client": "^5.22.0",
+    "@tanstack/react-query": "^5.85.5",
+    "@tanstack/react-query-devtools": "^5.85.5",
+    "@types/jsonwebtoken": "^9.0.10",
     "axios": "^1.6.2",
+    "bcryptjs": "^3.0.2",
+    "date-fns": "^4.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "lucide-react": "^0.542.0",
     "next": "14.0.4",
+    "next-auth": "^4.24.11",
     "prisma": "^5.7.0",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "recharts": "^3.1.2"
+  },
+  "devDependencies": {
+    "@types/node": "24.3.0",
+    "@types/react": "18.3.24",
+    "autoprefixer": "^10.4.16",
+    "postcss": "^8.4.31",
+    "tailwindcss": "^3.3.0",
+    "typescript": "5.9.2"
   }
 }
