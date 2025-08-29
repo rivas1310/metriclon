@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Configuración mínima para evitar recursiones
+  // Configuración mínima para evitar problemas en Vercel
   swcMinify: true,
   typescript: {
     ignoreBuildErrors: true,
@@ -9,19 +9,20 @@ const nextConfig = {
     ignoreDuringBuilds: true,
   },
   images: {
-    domains: ['localhost'],
     unoptimized: true,
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '**',
+      },
+    ],
   },
-  // Configuración de webpack simplificada
-  webpack: (config) => {
-    return config;
-  },
-  // Variables de entorno
-  env: {
-    CUSTOM_KEY: process.env.CUSTOM_KEY || 'default-value',
-  },
+  // Desactivar características que pueden causar problemas
+  experimental: {},
   // Optimización para evitar el error de stack size
   poweredByHeader: false,
+  // Configuración para evitar problemas de recursión
+  output: 'standalone',
 };
 
 module.exports = nextConfig;
