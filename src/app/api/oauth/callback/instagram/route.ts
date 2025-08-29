@@ -157,7 +157,7 @@ export async function GET(request: NextRequest) {
             username: userData.username,
             accountType: userData.account_type,
             accessToken: longLivedTokenData.access_token,
-            permissions: ['instagram_basic', 'instagram_content_publish', 'pages_read_engagement', 'pages_manage_posts'],
+            permissions: ['instagram_basic', 'instagram_content_publish', 'pages_show_list', 'pages_read_engagement', 'business_management'],
             instagram_business_account: instagramBusinessData.instagram_business_account,
             pages: [
               {
@@ -187,7 +187,7 @@ export async function GET(request: NextRequest) {
             username: userData.username,
             accountType: userData.account_type,
             accessToken: longLivedTokenData.access_token,
-            permissions: ['instagram_basic', 'instagram_content_publish', 'pages_read_engagement', 'pages_manage_posts'],
+            permissions: ['instagram_basic', 'instagram_content_publish', 'pages_show_list', 'pages_read_engagement', 'business_management'],
             instagram_business_account: instagramBusinessData.instagram_business_account,
             pages: [
               {
