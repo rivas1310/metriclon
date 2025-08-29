@@ -79,25 +79,56 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Token inválido' }, { status: 401 });
     }
 
-         // Para Instagram, necesitamos manejar tanto JSON como FormData
-     let reqData;
-     let mediaFile: File | null = null;
-     
-     if (request.headers.get('content-type')?.includes('multipart/form-data')) {
-       const formData = await request.formData();
-       reqData = {
-         organizationId: formData.get('organizationId') as string,
-         channelId: formData.get('channelId') as string,
-         content: formData.get('content') as string,
-         caption: formData.get('caption') as string,
-         type: formData.get('type') as string || 'TEXT',
-         scheduledFor: formData.get('scheduledFor') as string || null,
-         platform: formData.get('platform') as string
-       };
-       mediaFile = formData.get('media') as File || null;
-     } else {
-       reqData = await request.json();
-     }
+               // Para Instagram, necesitamos manejar tanto JSON como FormData
+      let reqData;
+      let mediaFile: File | null = null;
+      
+      console.log('=== ANALIZANDO REQUEST ===');
+      console.log('Content-Type:', request.headers.get('content-type'));
+      console.log('¿Es multipart/form-data?', request.headers.get('content-type')?.includes('multipart/form-data'));
+      
+      if (request.headers.get('content-type')?.includes('multipart/form-data')) {
+        console.log('=== PROCESANDO FORMDATA ===');
+        const formData = await request.formData();
+        
+        // Log de todos los campos recibidos
+        console.log('Campos en FormData:');
+        for (const [key, value] of formData.entries()) {
+          if (value instanceof File) {
+            console.log(`${key}:`, {
+              name: value.name,
+              type: value.type,
+              size: value.size,
+              isFile: true
+            });
+          } else {
+            console.log(`${key}:`, value);
+          }
+        }
+        
+        reqData = {
+          organizationId: formData.get('organizationId') as string,
+          channelId: formData.get('channelId') as string,
+          content: formData.get('content') as string,
+          caption: formData.get('caption') as string,
+          type: formData.get('type') as string || 'TEXT',
+          scheduledFor: formData.get('scheduledFor') as string || null,
+          platform: formData.get('platform') as string
+        };
+        mediaFile = formData.get('media') as File || null;
+        
+        console.log('=== DATOS EXTRAÍDOS ===');
+        console.log('reqData:', reqData);
+        console.log('mediaFile:', mediaFile ? {
+          name: mediaFile.name,
+          type: mediaFile.type,
+          size: mediaFile.size
+        } : 'null');
+      } else {
+        console.log('=== PROCESANDO JSON ===');
+        reqData = await request.json();
+        console.log('reqData (JSON):', reqData);
+      }
      
      const { organizationId, channelId, content, caption, type = 'TEXT', scheduledFor = null, platform } = reqData;
     
