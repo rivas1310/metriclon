@@ -66,8 +66,8 @@ export function CreatePostModal({ isOpen, onClose, organizationId, channels, onP
        if (selectedChannel?.platform === 'FACEBOOK' || selectedChannel?.platform === 'INSTAGRAM') {
          let publishResponse;
          
-         // Para Instagram, necesitamos enviar FormData si hay imágenes
-         if (selectedChannel.platform === 'INSTAGRAM' && formData.images.length > 0) {
+         // Para Instagram Y Facebook, enviar FormData si hay imágenes
+         if (formData.images.length > 0) {
            const formDataToSend = new FormData();
            formDataToSend.append('organizationId', organizationId);
            formDataToSend.append('channelId', selectedChannel.id);
@@ -77,12 +77,20 @@ export function CreatePostModal({ isOpen, onClose, organizationId, channels, onP
            formDataToSend.append('platform', selectedChannel.platform);
            formDataToSend.append('media', formData.images[0]); // Usar la primera imagen
            
+           console.log('=== ENVIANDO FORMDATA CON IMAGEN ===');
+           console.log('Plataforma:', selectedChannel.platform);
+           console.log('¿Tiene imagen?', formData.images.length > 0);
+           console.log('Tipo de archivo:', formData.images[0]?.type);
+           
            publishResponse = await fetch('/api/posts/publish', {
              method: 'POST',
              body: formDataToSend,
            });
          } else {
-           // Para Facebook o Instagram sin imágenes, usar JSON
+           // Sin imágenes, usar JSON para ambas plataformas
+           console.log('=== ENVIANDO JSON (SOLO TEXTO) ===');
+           console.log('Plataforma:', selectedChannel.platform);
+           
            publishResponse = await fetch('/api/posts/publish', {
              method: 'POST',
              headers: {
