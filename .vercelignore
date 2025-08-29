@@ -17,8 +17,9 @@
 !src/hooks/
 !public/
 
-# Prisma
-!prisma/schema.prisma
+# Prisma (incluir toda la carpeta)
+!prisma/
+!.env
 
 # Ignorar explícitamente directorios problemáticos
 node_modules
@@ -30,5 +31,4 @@ node_modules
 .DS_Store
 *.log
 *.tmp
-.env*
 .vercel

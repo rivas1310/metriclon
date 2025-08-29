@@ -17,7 +17,7 @@
     "docker:logs": "docker-compose logs -f",
     "test": "jest",
     "format": "prettier --write .",
-    "vercel-build": "npx prisma generate && NODE_OPTIONS='--max-old-space-size=3072' next build"
+    "vercel-build": "npx prisma generate --schema=./prisma/schema.prisma && NODE_OPTIONS='--max-old-space-size=3072' next build"
   },
   "keywords": [
     "social-media",
