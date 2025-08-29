@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { NextRequest, NextResponse } from 'next/server';
 
 const INSTAGRAM_CLIENT_ID = process.env.INSTAGRAM_CLIENT_ID;
