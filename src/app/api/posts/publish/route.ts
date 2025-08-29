@@ -410,9 +410,11 @@ export async function POST(request: NextRequest) {
       // en la cuenta de Instagram conectada en lugar de usar la API de Instagram Business
       console.log('Usando ID para publicación:', instagramBusinessId);
 
-      console.log('=== CUENTA DE INSTAGRAM BUSINESS ===');
-      console.log('Instagram Business ID:', instagramBusinessId);
-      console.log('Access Token presente:', !!meta?.access_token);
+             console.log('=== CUENTA DE INSTAGRAM BUSINESS ===');
+       console.log('Instagram Business ID:', instagramBusinessId);
+       console.log('Access Token presente:', !!meta?.access_token);
+       console.log('Access Token completo:', meta?.access_token);
+       console.log('Access Token del canal:', channel.accessToken);
 
       // Para Instagram, necesitamos usar la API correcta según la documentación
       try {
@@ -613,17 +615,19 @@ export async function POST(request: NextRequest) {
         } else {
           throw new Error('No se pudo determinar el ID de usuario de Instagram');
         }
-      } catch (error) {
-        console.error('Error al publicar en Instagram:', error);
-        
-        // Guardar como borrador
-        await prisma.post.update({
-          where: { id: postId },
-          data: {
-            status: "DRAFT", // Usando el enum correcto
-            publishedAt: null,
-          }
-        });
+             } catch (error) {
+         console.error('Error al publicar en Instagram:', error);
+         
+         // Solo guardar como borrador si ya existe un post
+         if (postId) {
+           await prisma.post.update({
+             where: { id: postId },
+             data: {
+               status: "DRAFT", // Usando el enum correcto
+               publishedAt: null,
+             }
+           });
+         }
         
         return NextResponse.json({
           error: error.message || 'Error al publicar en Instagram',

@@ -196,7 +196,10 @@ export async function GET(request: NextRequest) {
             accountType: userData.account_type,
             accessToken: longLivedTokenData.access_token,
             permissions: ['instagram_basic', 'instagram_content_publish'],
-            instagram_business_account: instagramBusinessData.instagram_business_account,
+            instagram_business_account: {
+              id: userData.id, // Usar el ID real de Instagram, no el del canal
+              username: userData.username
+            },
             pages: [
               {
                 id: page.id,
@@ -226,7 +229,10 @@ export async function GET(request: NextRequest) {
             accountType: userData.account_type,
             accessToken: longLivedTokenData.access_token,
             permissions: ['instagram_basic', 'instagram_content_publish'],
-            instagram_business_account: instagramBusinessData.instagram_business_account,
+            instagram_business_account: {
+              id: userData.id, // Usar el ID real de Instagram, no el del canal
+              username: userData.username
+            },
             pages: [
               {
                 id: page.id,
