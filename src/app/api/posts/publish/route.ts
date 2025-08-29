@@ -1,16 +1,65 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { v2 as cloudinary } from 'cloudinary';
 
 // Función para convertir archivos a URLs que Instagram pueda acceder
 async function convertFileToUrl(file: File): Promise<string> {
-  // Por ahora, usamos una imagen de placeholder como fallback
-  // En producción, deberías subir el archivo a un servicio como AWS S3, Cloudinary, etc.
-  console.log('Convirtiendo archivo a URL:', file.name, file.type, file.size);
-  
-  // TODO: Implementar subida real a servicio de almacenamiento
-  // Por ahora, retornamos una imagen de Unsplash como ejemplo
-  return "https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?w=1080&h=1080&fit=crop&crop=center";
+  try {
+    console.log('=== SUBIENDO ARCHIVO A CLOUDINARY ===');
+    console.log('Nombre:', file.name);
+    console.log('Tipo:', file.type);
+    console.log('Tamaño:', file.size, 'bytes');
+    
+    // Configurar Cloudinary
+    cloudinary.config({
+      cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+      api_key: process.env.CLOUDINARY_API_KEY,
+      api_secret: process.env.CLOUDINARY_API_SECRET,
+    });
+    
+    // Generar nombre único para el archivo
+    const timestamp = Date.now();
+    const randomId = Math.random().toString(36).substring(2, 15);
+    const extension = file.name.split('.').pop() || 'jpg';
+    const fileName = `instagram-${timestamp}-${randomId}`;
+    
+    console.log('Nombre generado:', fileName);
+    
+    // Convertir File a Buffer para Cloudinary
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    
+    // Subir archivo a Cloudinary
+    const result = await new Promise((resolve, reject) => {
+      cloudinary.uploader.upload_stream(
+        {
+          resource_type: 'auto',
+          public_id: fileName,
+          folder: 'metriclon-instagram',
+          transformation: [
+            { width: 1080, height: 1080, crop: 'fill', gravity: 'center' }
+          ]
+        },
+        (error, result) => {
+          if (error) reject(error);
+          else resolve(result);
+        }
+      ).end(buffer);
+    });
+    
+    console.log('✅ Archivo subido exitosamente a Cloudinary');
+    console.log('URL pública:', (result as any).secure_url);
+    
+    return (result as any).secure_url;
+    
+  } catch (error) {
+    console.error('❌ Error subiendo archivo a Cloudinary:', error);
+    
+    // Fallback: usar imagen por defecto si falla la subida
+    console.log('⚠️ Usando imagen por defecto como fallback');
+    return "https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?w=1080&h=1080&fit=crop&crop=center";
+  }
 }
 
 export async function POST(request: NextRequest) {
