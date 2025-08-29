@@ -1,19 +1,26 @@
-# Ignorar todo por defecto
+# Estrategia: incluir solo lo mínimo necesario
 *
 
-# Permitir solo lo necesario
-!src/
-!public/
-!prisma/schema.prisma
-!next.config.js
+# Archivos esenciales para la build
 !package.json
 !package-lock.json
+!next.config.js
 !tsconfig.json
 !postcss.config.js
 !tailwind.config.js
 !next-env.d.ts
 
-# Ignorar específicamente estos directorios y archivos
+# Código fuente esencial
+!src/app/
+!src/components/
+!src/lib/
+!src/hooks/
+!public/
+
+# Prisma
+!prisma/schema.prisma
+
+# Ignorar explícitamente directorios problemáticos
 node_modules
 .next
 .git
@@ -22,14 +29,6 @@ node_modules
 .idea
 .DS_Store
 *.log
-*.lock
-*.swp
-*.swo
-*~
-.env
-.env.*
+*.tmp
+.env*
 .vercel
-ssl/
-docker-compose.yml
-Dockerfile
-.dockerignore

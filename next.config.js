@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Configuración mínima para evitar problemas en Vercel
+  // Configuración ultra-mínima para evitar problemas en Vercel
   swcMinify: true,
   typescript: {
     ignoreBuildErrors: true,
@@ -10,17 +10,9 @@ const nextConfig = {
   },
   images: {
     unoptimized: true,
-    remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: '**',
-      },
-    ],
   },
-  // Desactivar características que pueden causar problemas
+  // Desactivar completamente características que pueden causar problemas
   experimental: {},
-  // Optimización para evitar el error de stack size
-  poweredByHeader: false,
   // Configuración para evitar problemas de recursión
   output: 'standalone',
 };
