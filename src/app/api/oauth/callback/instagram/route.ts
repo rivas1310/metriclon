@@ -84,21 +84,40 @@ export async function GET(request: NextRequest) {
     // Obtener token de larga duración para Facebook/Instagram
     console.log('Instagram OAuth Callback - Obteniendo token de larga duración...');
     
-    const longLivedTokenResponse = await fetch(`https://graph.facebook.com/v18.0/oauth/access_token?grant_type=fb_exchange_token&client_id=${process.env.INSTAGRAM_CLIENT_ID!}&client_secret=${process.env.INSTAGRAM_CLIENT_SECRET!}&fb_exchange_token=${tokenData.access_token}`);
+    let longLivedTokenData = null;
+    let longLivedTokenError = null;
     
-    if (!longLivedTokenResponse.ok) {
-      const errorText = await longLivedTokenResponse.text();
-      console.error('Instagram OAuth Callback - Error obteniendo token de larga duración:', errorText);
-      return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/dashboard?error=instagram_long_lived_token_error`);
+    try {
+      const longLivedTokenResponse = await fetch(`https://graph.facebook.com/v18.0/oauth/access_token?grant_type=fb_exchange_token&client_id=${process.env.INSTAGRAM_CLIENT_ID!}&client_secret=${process.env.INSTAGRAM_CLIENT_SECRET!}&fb_exchange_token=${tokenData.access_token}`);
+      
+      if (longLivedTokenResponse.ok) {
+        longLivedTokenData = await longLivedTokenResponse.json();
+        console.log('Instagram OAuth Callback - Token de larga duración obtenido:', !!longLivedTokenData.access_token);
+      } else {
+        const errorText = await longLivedTokenResponse.text();
+        longLivedTokenError = errorText;
+        console.error('Instagram OAuth Callback - Error obteniendo token de larga duración:', errorText);
+        
+        // Continuar con el token de corta duración como fallback
+        console.log('Instagram OAuth Callback - Continuando con token de corta duración como fallback...');
+      }
+    } catch (error) {
+      longLivedTokenError = error instanceof Error ? error.message : 'Error desconocido';
+      console.error('Instagram OAuth Callback - Excepción obteniendo token de larga duración:', longLivedTokenError);
+      console.log('Instagram OAuth Callback - Continuando con token de corta duración como fallback...');
     }
     
-    const longLivedTokenData = await longLivedTokenResponse.json();
-    console.log('Instagram OAuth Callback - Token de larga duración obtenido:', !!longLivedTokenData.access_token);
+    // Si no tenemos token de larga duración, usar el de corta duración
+    const accessTokenToUse = longLivedTokenData?.access_token || tokenData.access_token;
+    const tokenType = longLivedTokenData ? 'long_lived' : 'short_lived';
+    
+    console.log('Instagram OAuth Callback - Token a usar:', tokenType);
+    console.log('Instagram OAuth Callback - Token presente:', !!accessTokenToUse);
     
     // Obtener cuentas de Instagram Business asociadas
     console.log('Instagram OAuth Callback - Obteniendo cuentas de Instagram Business...');
     
-    const accountsResponse = await fetch(`https://graph.facebook.com/v18.0/me/accounts?access_token=${longLivedTokenData.access_token}`);
+    const accountsResponse = await fetch(`https://graph.facebook.com/v18.0/me/accounts?access_token=${accessTokenToUse}`);
     
     if (!accountsResponse.ok) {
       const errorText = await accountsResponse.text();
@@ -194,7 +213,9 @@ export async function GET(request: NextRequest) {
             instagramUserId: userData.id,
             username: userData.username,
             accountType: userData.account_type,
-            accessToken: longLivedTokenData.access_token,
+            accessToken: accessTokenToUse,
+            tokenType: tokenType,
+            longLivedTokenError: longLivedTokenError,
             permissions: ['instagram_basic', 'instagram_content_publish'],
             instagram_business_account: {
               id: userData.id, // Usar el ID real de Instagram
@@ -227,7 +248,9 @@ export async function GET(request: NextRequest) {
             instagramUserId: userData.id,
             username: userData.username,
             accountType: userData.account_type,
-            accessToken: longLivedTokenData.access_token,
+            accessToken: accessTokenToUse,
+            tokenType: tokenType,
+            longLivedTokenError: longLivedTokenError,
             permissions: ['instagram_basic', 'instagram_content_publish'],
             instagram_business_account: {
               id: userData.id, // Usar el ID real de Instagram
@@ -251,7 +274,14 @@ export async function GET(request: NextRequest) {
     // Redirigir al dashboard con éxito
     console.log('Instagram OAuth Callback - Redirigiendo al dashboard...');
     
-    return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/dashboard?success=instagram_connected&username=${userData.username}`);
+    let redirectUrl = `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?success=instagram_connected&username=${userData.username}`;
+    
+    // Si usamos token de corta duración, agregar advertencia
+    if (tokenType === 'short_lived') {
+      redirectUrl += '&warning=short_lived_token&message=Se usó token de corta duración. Puede expirar pronto.';
+    }
+    
+    return NextResponse.redirect(redirectUrl);
 
   } catch (error) {
     console.error('Instagram OAuth Callback - Error general:', error);
