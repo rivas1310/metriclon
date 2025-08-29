@@ -1,0 +1,51 @@
+# Archivos de desarrollo
+.env.local
+.env.development
+.env.test
+
+# Archivos de build local
+.next
+out
+dist
+
+# Archivos de sistema
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Archivos temporales
+*.tmp
+*.temp
+
+# Archivos de IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# Archivos de Git
+.git
+.gitignore
+
+# Archivos de Prisma (se generarán en Vercel)
+prisma/migrations
+prisma/seed.ts
+
+# Archivos de Docker
+docker-compose.yml
+Dockerfile
+.dockerignore
+
+# Archivos de testing
+coverage
+.nyc_output
+test-results
+
+# Archivos de cache
+.cache
+.parcel-cache

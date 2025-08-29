@@ -1,19 +1,32 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   experimental: {
+    // Deshabilitar características experimentales que pueden causar problemas
     serverComponentsExternalPackages: ['@prisma/client'],
   },
-  images: {
-    domains: [
-      'localhost',
-      'graph.facebook.com',
-      'scontent.xx.fbcdn.net',
-      'scontent.cdninstagram.com',
-      'pbs.twimg.com',
-      'yt3.ggpht.com',
-      'i.ytimg.com',
-    ],
+  // Optimizaciones para Vercel
+  swcMinify: true,
+  compress: true,
+  // Configuración de build
+  typescript: {
+    ignoreBuildErrors: false,
   },
+  eslint: {
+    ignoreDuringBuilds: false,
+  },
+  // Configuración de imágenes
+  images: {
+    domains: ['localhost'],
+    unoptimized: false,
+  },
+  // Configuración de webpack
+  webpack: (config, { isServer }) => {
+    if (isServer) {
+      config.externals.push('@prisma/client');
+    }
+    return config;
+  },
+  // Variables de entorno
   env: {
     CUSTOM_KEY: process.env.CUSTOM_KEY || 'default-value',
   },
