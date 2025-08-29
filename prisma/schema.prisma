@@ -1,0 +1,311 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Organization {
+  id          String   @id @default(uuid())
+  name        String
+  slug        String   @unique
+  description String?
+  logo        String?
+  meta        Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relaciones
+  members     OrganizationMember[]
+  channels    Channel[]
+  posts      Post[]
+  campaigns  Campaign[]
+  notifications Notification[]
+  notificationPreferences NotificationPreferences[]
+
+  @@map("organizations")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  firstName String?
+  lastName  String?
+  avatar    String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relaciones
+  memberships OrganizationMember[]
+  posts      Post[]
+  campaigns  Campaign[]
+  notificationPreferences NotificationPreferences[]
+
+  @@map("users")
+}
+
+model OrganizationMember {
+  userId         String
+  organizationId String
+  role           MemberRole @default(MEMBER)
+  joinedAt       DateTime   @default(now())
+
+  // Relaciones
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@id([userId, organizationId])
+  @@map("organization_members")
+}
+
+model Channel {
+  id             String   @id @default(uuid())
+  organizationId String
+  platform       Platform
+  externalId     String
+  name           String
+  accessToken    String
+  refreshToken   String?
+  tokenExpiresAt DateTime?
+  meta           Json?
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relaciones
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  posts        Post[]
+
+  @@unique([organizationId, platform, externalId])
+  @@map("channels")
+}
+
+model Post {
+  id             String      @id @default(uuid())
+  organizationId String
+  channelId      String
+  status         PostStatus  @default(DRAFT)
+  type           PostType
+  scheduledAt    DateTime?
+  publishedAt    DateTime?
+  externalPostId String?
+  
+  // Contenido
+  caption        String?
+  link          String?
+  hashtags      String[]
+  
+  // Metadatos
+  createdBy     String
+  constraints   Json?
+  meta         Json?
+  errorMessage  String?
+  attempts      Int         @default(0)
+  maxAttempts   Int         @default(3)
+  
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  // Relaciones
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  channel      Channel     @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  creator      User        @relation(fields: [createdBy], references: [id])
+  assets       Asset[]
+  metrics      PostMetric[]
+  jobs         Job[]
+  campaign     Campaign?   @relation(fields: [campaignId], references: [id])
+  campaignId   String?
+
+  @@map("posts")
+}
+
+model Asset {
+  id        String   @id @default(uuid())
+  postId    String
+  type      AssetType
+  url       String
+  filename  String?
+  size      Int?
+  meta      Json?
+  createdAt DateTime @default(now())
+
+  // Relaciones
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@map("assets")
+}
+
+model Campaign {
+  id             String   @id @default(uuid())
+  organizationId String
+  name           String
+  description    String?
+  startDate      DateTime
+  endDate        DateTime?
+  status         CampaignStatus @default(DRAFT)
+  createdBy      String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relaciones
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  creator      User        @relation(fields: [createdBy], references: [id])
+  posts        Post[]
+
+  @@map("campaigns")
+}
+
+model Job {
+  id        String   @id @default(uuid())
+  postId    String
+  type      JobType
+  runAt     DateTime
+  attempts  Int      @default(0)
+  maxAttempts Int    @default(3)
+  lastError String?
+  status    JobStatus @default(PENDING)
+  data      Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relaciones
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@map("jobs")
+}
+
+model PostMetric {
+  postId      String
+  capturedAt  DateTime
+  impressions Int?
+  reach       Int?
+  clicks      Int?
+  likes       Int?
+  comments    Int?
+  shares      Int?
+  saves       Int?
+  views       Int?
+  engagement  Float?
+  createdAt   DateTime @default(now())
+
+  // Relaciones
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@id([postId, capturedAt])
+  @@map("post_metrics")
+}
+
+model Notification {
+  id             String   @id @default(uuid())
+  organizationId String
+  type           String   // posts, metrics, channels, system, engagement
+  title          String
+  message        String
+  category       String   // posts, metrics, channels, system, engagement
+  metadata       Json?    // Datos adicionales específicos del tipo
+  actionUrl      String?  // URL para acción o redirección
+  isRead         Boolean  @default(false)
+  readAt         DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relaciones
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+model NotificationPreferences {
+  userId         String
+  organizationId String
+  email          Boolean  @default(true)
+  push           Boolean  @default(true)
+  categories     Json     // Configuración por categoría
+  frequency      String   @default("realtime") // realtime, daily, weekly
+  quietHours     Json?    // Horas silenciosas
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relaciones
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@id([userId, organizationId])
+  @@map("notification_preferences")
+}
+
+// Enums
+enum MemberRole {
+  OWNER
+  ADMIN
+  MANAGER
+  MEMBER
+}
+
+enum Platform {
+  INSTAGRAM
+  FACEBOOK
+  LINKEDIN
+  TWITTER
+  TIKTOK
+  PINTEREST
+  YOUTUBE
+  GOOGLE_BUSINESS
+  THREADS
+}
+
+enum PostStatus {
+  DRAFT
+  SCHEDULED
+  PUBLISHING
+  PUBLISHED
+  FAILED
+  CANCELLED
+}
+
+enum PostType {
+  TEXT
+  IMAGE
+  VIDEO
+  CAROUSEL
+  REEL
+  STORY
+  LINK
+}
+
+enum AssetType {
+  IMAGE
+  VIDEO
+  DOCUMENT
+  AUDIO
+}
+
+enum CampaignStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  COMPLETED
+  CANCELLED
+}
+
+enum JobType {
+  PUBLISH
+  METRICS_PULL
+  MEDIA_UPLOAD
+  WEBHOOK_PROCESS
+}
+
+enum JobStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+}

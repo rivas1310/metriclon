@@ -1,0 +1,65 @@
+version: '3.8'
+
+services:
+  # Base de datos PostgreSQL
+  postgres:
+    image: postgres:15-alpine
+    container_name: integracion_postgres
+    environment:
+      POSTGRES_DB: integracion_social
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/prisma/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - integracion_network
+
+  # Redis para colas de trabajo
+  redis:
+    image: redis:7-alpine
+    container_name: integracion_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - integracion_network
+
+  # pgAdmin para administrar PostgreSQL (opcional)
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: integracion_pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@integracion.com
+      PGADMIN_DEFAULT_PASSWORD: admin123
+    ports:
+      - "8080:80"
+    depends_on:
+      - postgres
+    networks:
+      - integracion_network
+
+  # Redis Commander para administrar Redis (opcional)
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: integracion_redis_commander
+    environment:
+      REDIS_HOSTS: local:redis:6379
+    ports:
+      - "8081:8081"
+    depends_on:
+      - redis
+    networks:
+      - integracion_network
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  integracion_network:
+    driver: bridge
+
