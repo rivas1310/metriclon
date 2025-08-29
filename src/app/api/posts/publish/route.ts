@@ -549,13 +549,12 @@ export async function POST(request: NextRequest) {
            formData.append('caption', message);
            formData.append('access_token', meta.access_token || channel.accessToken);
            
-           const mediaResponse = await fetch(mediaUrl, {
-             method: 'POST',
-             body: formData,
-           });
-          });
-          
-          const mediaResponseText = await mediaResponse.text();
+                       const mediaResponse = await fetch(mediaUrl, {
+              method: 'POST',
+              body: formData,
+            });
+            
+            const mediaResponseText = await mediaResponse.text();
           console.log('=== RESPUESTA DE INSTAGRAM (MEDIA) ===');
           console.log('Status:', mediaResponse.status);
           console.log('Response Body:', mediaResponseText);

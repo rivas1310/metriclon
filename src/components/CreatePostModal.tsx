@@ -55,44 +55,42 @@ export function CreatePostModal({ isOpen, onClose, organizationId, channels, onP
         scheduledFor: formData.scheduledFor || null,
       });
 
-      // Publicar en Facebook o Instagram
-      if (selectedChannel?.platform === 'FACEBOOK' || selectedChannel?.platform === 'INSTAGRAM') {
-        const publishResponse = await fetch('/api/posts/publish', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-                  // Para Instagram, necesitamos enviar FormData si hay imágenes
-        if (selectedChannel.platform === 'INSTAGRAM' && formData.images.length > 0) {
-          const formDataToSend = new FormData();
-          formDataToSend.append('organizationId', organizationId);
-          formDataToSend.append('channelId', selectedChannel.id);
-          formDataToSend.append('caption', formData.content);
-          formDataToSend.append('type', 'TEXT');
-          formDataToSend.append('scheduledFor', publishType === 'now' ? '' : (formData.scheduledFor || ''));
-          formDataToSend.append('platform', selectedChannel.platform);
-          formDataToSend.append('media', formData.images[0]); // Usar la primera imagen
-          
-          const response = await fetch('/api/posts/publish', {
-            method: 'POST',
-            body: formDataToSend,
-          });
-        } else {
-          // Para Facebook o Instagram sin imágenes, usar JSON
-          const response = await fetch('/api/posts/publish', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              organizationId,
-              channelId: selectedChannel.id,
-              caption: formData.content,
-              type: 'TEXT',
-              scheduledFor: publishType === 'now' ? null : formData.scheduledFor || null,
-              platform: selectedChannel.platform
-            }),
-          });
-        }
-        });
+       // Publicar en Facebook o Instagram
+       if (selectedChannel?.platform === 'FACEBOOK' || selectedChannel?.platform === 'INSTAGRAM') {
+         let publishResponse;
+         
+         // Para Instagram, necesitamos enviar FormData si hay imágenes
+         if (selectedChannel.platform === 'INSTAGRAM' && formData.images.length > 0) {
+           const formDataToSend = new FormData();
+           formDataToSend.append('organizationId', organizationId);
+           formDataToSend.append('channelId', selectedChannel.id);
+           formDataToSend.append('caption', formData.content);
+           formDataToSend.append('type', 'TEXT');
+           formDataToSend.append('scheduledFor', publishType === 'now' ? '' : (formData.scheduledFor || ''));
+           formDataToSend.append('platform', selectedChannel.platform);
+           formDataToSend.append('media', formData.images[0]); // Usar la primera imagen
+           
+           publishResponse = await fetch('/api/posts/publish', {
+             method: 'POST',
+             body: formDataToSend,
+           });
+         } else {
+           // Para Facebook o Instagram sin imágenes, usar JSON
+           publishResponse = await fetch('/api/posts/publish', {
+             method: 'POST',
+             headers: {
+               'Content-Type': 'application/json',
+             },
+             body: JSON.stringify({
+               organizationId,
+               channelId: selectedChannel.id,
+               caption: formData.content,
+               type: 'TEXT',
+               scheduledFor: publishType === 'now' ? null : formData.scheduledFor || null,
+               platform: selectedChannel.platform
+             }),
+           });
+         }
 
         if (publishResponse.ok) {
           const result = await publishResponse.json();
@@ -121,21 +119,21 @@ export function CreatePostModal({ isOpen, onClose, organizationId, channels, onP
         }
       }
 
-                   // Fallback: usar la API normal de posts
-             const response = await fetch('/api/posts', {
-               method: 'POST',
-               headers: { 'Content-Type': 'application/json' },
-               body: JSON.stringify({
-                 organizationId,
-                 channelId: selectedChannel.id,
-                 content: formData.content,
-                 type: 'TEXT',
-                 scheduledFor: publishType === 'now' ? null : formData.scheduledFor || null,
-                 hashtags: formData.hashtags.split(',').map(tag => tag.trim()).filter(Boolean),
-               }),
-             });
+       // Fallback: usar la API normal de posts
+       const response = await fetch('/api/posts', {
+         method: 'POST',
+         headers: { 'Content-Type': 'application/json' },
+         body: JSON.stringify({
+           organizationId,
+           channelId: selectedChannel.id,
+           content: formData.content,
+           type: 'TEXT',
+           scheduledFor: publishType === 'now' ? null : formData.scheduledFor || null,
+           hashtags: formData.hashtags.split(',').map(tag => tag.trim()).filter(Boolean),
+         }),
+       });
 
-      if (response.ok) {
+       if (response.ok) {
         onPostCreated();
         onClose();
         // Reset form
