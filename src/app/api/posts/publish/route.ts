@@ -180,26 +180,33 @@ export async function POST(request: NextRequest) {
     const message = caption || content; // Usar caption si está disponible, sino content
     const publishData: any = { message };
     
-    if (channel.platform === 'FACEBOOK') {
-      if (!permissions.includes('pages_manage_posts')) {
-        return NextResponse.json({ 
-          error: 'No tienes permisos para publicar en Facebook',
-          note: 'Necesitas solicitar permisos de pages_manage_posts en Meta App Review',
-          debug: {
-            permissions: permissions,
-            hasPagesManagePosts: permissions.includes('pages_manage_posts'),
-            channelMeta: channel.meta
-          }
-        }, { status: 403 });
-      }
+         if (channel.platform === 'FACEBOOK') {
+       if (!permissions.includes('pages_manage_posts')) {
+         return NextResponse.json({ 
+           error: 'No tienes permisos para publicar en Facebook',
+           note: 'Necesitas solicitar permisos de pages_manage_posts en Meta App Review',
+           debug: {
+             permissions: permissions,
+             hasPagesManagePosts: permissions.includes('pages_manage_posts'),
+             channelMeta: channel.meta
+           }
+         }, { status: 403 });
+       }
 
-      // Obtener la primera página disponible para publicar
-      const pages = meta?.pages || [];
-      if (pages.length === 0) {
-        return NextResponse.json({ error: 'No hay páginas disponibles para publicar' }, { status: 400 });
-      }
+       // Obtener la primera página disponible para publicar
+       const pages = meta?.pages || [];
+       if (pages.length === 0) {
+         return NextResponse.json({ error: 'No hay páginas disponibles para publicar' }, { status: 400 });
+       }
 
-      const page = pages[0]; // Usar la primera página
+       const page = pages[0]; // Usar la primera página
+       
+       // Verificar si hay contenido multimedia para Facebook
+       const hasMedia = mediaFile && mediaFile.size > 0;
+       console.log('=== CONTENIDO MULTIMEDIA PARA FACEBOOK ===');
+       console.log('¿Tiene archivo de media?', hasMedia);
+       console.log('Tipo de archivo:', mediaFile?.type);
+       console.log('Tamaño del archivo:', mediaFile?.size);
       console.log('=== PÁGINA SELECCIONADA ===');
       console.log('Page Name:', page.name);
       console.log('Page ID:', page.id);
@@ -241,20 +248,56 @@ export async function POST(request: NextRequest) {
       console.log('=== DATOS FINALES DE PUBLICACIÓN ===');
       console.log('Datos a enviar:', JSON.stringify(publishData, null, 2));
 
-      // Publicar en Facebook usando la Graph API
-      const facebookUrl = `https://graph.facebook.com/v18.0/${page.id}/feed`;
-      console.log('URL de Facebook:', facebookUrl);
-      
-      const facebookResponse = await fetch(facebookUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          ...publishData,
-          access_token: page.access_token,
-        }),
-      });
+             // Publicar en Facebook usando la Graph API
+       let facebookUrl;
+       let facebookBody;
+       
+       if (hasMedia) {
+         // Si hay imagen, usar el endpoint de fotos
+         console.log('=== PUBLICANDO FOTO EN FACEBOOK ===');
+         facebookUrl = `https://graph.facebook.com/v18.0/${page.id}/photos`;
+         
+         // Subir imagen a Cloudinary primero
+         const imageUrl = await convertFileToUrl(mediaFile);
+         console.log('URL de imagen para Facebook:', imageUrl);
+         
+         facebookBody = {
+           url: imageUrl,
+           caption: message,
+           access_token: page.access_token,
+         };
+         
+         // Si hay fecha programada, agregar parámetros de programación
+         if (scheduledFor && scheduledFor !== '') {
+           const scheduledTime = new Date(scheduledFor);
+           const now = new Date();
+           
+           if (scheduledTime > now) {
+             facebookBody.scheduled_publish_time = Math.floor(scheduledTime.getTime() / 1000);
+             facebookBody.published = false;
+             console.log('Foto programada para Facebook:', scheduledTime);
+           }
+         }
+       } else {
+         // Si no hay imagen, usar el endpoint de feed (solo texto)
+         console.log('=== PUBLICANDO TEXTO EN FACEBOOK ===');
+         facebookUrl = `https://graph.facebook.com/v18.0/${page.id}/feed`;
+         facebookBody = {
+           ...publishData,
+           access_token: page.access_token,
+         };
+       }
+       
+       console.log('URL de Facebook:', facebookUrl);
+       console.log('Datos a enviar:', JSON.stringify(facebookBody, null, 2));
+       
+       const facebookResponse = await fetch(facebookUrl, {
+         method: 'POST',
+         headers: {
+           'Content-Type': 'application/json',
+         },
+         body: JSON.stringify(facebookBody),
+       });
 
       console.log('=== RESPUESTA DE FACEBOOK ===');
       console.log('Status:', facebookResponse.status);
