@@ -11,12 +11,13 @@
     "db:studio": "npx prisma studio",
     "db:generate": "npx prisma generate",
     "db:migrate": "npx prisma migrate dev",
-    "db:seed": "npx prisma db seed --preview-feature",
+    "db:seed": "npx prisma db seed",
     "docker:up": "docker-compose up -d",
     "docker:down": "docker-compose down",
     "docker:logs": "docker-compose logs -f",
     "test": "jest",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "vercel-build": "npx prisma generate && next build"
   },
   "keywords": [
     "social-media",
