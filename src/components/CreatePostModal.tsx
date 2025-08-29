@@ -38,7 +38,7 @@ export function CreatePostModal({ isOpen, onClose, organizationId, channels, onP
     }
 
     try {
-      // Intentar publicación real primero (solo para Facebook por ahora)
+      // Intentar publicación real primero (Facebook e Instagram)
       const selectedChannel = channels.find(ch => ch.platform === formData.platforms[0]);
       
       if (!selectedChannel) {
@@ -55,22 +55,24 @@ export function CreatePostModal({ isOpen, onClose, organizationId, channels, onP
         scheduledFor: formData.scheduledFor || null,
       });
 
-                   if (selectedChannel?.platform === 'FACEBOOK') {
-               const publishResponse = await fetch('/api/posts/publish', {
-                 method: 'POST',
-                 headers: { 'Content-Type': 'application/json' },
-                 body: JSON.stringify({
-                   organizationId,
-                   channelId: selectedChannel.id,
-                   content: formData.content,
-                   type: 'TEXT',
-                   scheduledFor: publishType === 'now' ? null : formData.scheduledFor || null,
-                 }),
-               });
+      // Publicar en Facebook o Instagram
+      if (selectedChannel?.platform === 'FACEBOOK' || selectedChannel?.platform === 'INSTAGRAM') {
+        const publishResponse = await fetch('/api/posts/publish', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            organizationId,
+            channelId: selectedChannel.id,
+            content: formData.content,
+            type: 'TEXT',
+            scheduledFor: publishType === 'now' ? null : formData.scheduledFor || null,
+            platform: selectedChannel.platform // Añadir plataforma para diferenciar en el backend
+          }),
+        });
 
         if (publishResponse.ok) {
           const result = await publishResponse.json();
-          console.log('Post publicado en Facebook:', result);
+          console.log(`Post publicado en ${selectedChannel.platform}:`, result);
           alert(`✅ ${result.message}`);
           onPostCreated();
           onClose();
@@ -86,14 +88,12 @@ export function CreatePostModal({ isOpen, onClose, organizationId, channels, onP
           return;
         } else {
           const error = await publishResponse.json();
-          console.error('Error publicando en Facebook:', error);
+          console.error(`Error publicando en ${selectedChannel.platform}:`, error);
           
           // Si falla la publicación real, mostrar el error
-          if (error.error?.includes('permisos') || error.error?.includes('Facebook')) {
-            setError(`❌ ${error.error}\n\n${error.note || 'Necesitas permisos de publicación en Facebook'}`);
-            setIsLoading(false);
-            return;
-          }
+          setError(`❌ ${error.error}\n\n${error.note || `Necesitas permisos de publicación en ${selectedChannel.platform}`}`);
+          setIsLoading(false);
+          return;
         }
       }
 

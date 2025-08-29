@@ -78,6 +78,60 @@ export async function GET(request: NextRequest) {
 
     const userData = await userResponse.json();
     console.log('Instagram OAuth Callback - Usuario obtenido:', userData);
+    
+    // Obtener token de larga duración para Facebook/Instagram
+    console.log('Instagram OAuth Callback - Obteniendo token de larga duración...');
+    
+    const longLivedTokenResponse = await fetch(`https://graph.facebook.com/v18.0/oauth/access_token?grant_type=fb_exchange_token&client_id=${process.env.INSTAGRAM_CLIENT_ID!}&client_secret=${process.env.INSTAGRAM_CLIENT_SECRET!}&fb_exchange_token=${tokenData.access_token}`);
+    
+    if (!longLivedTokenResponse.ok) {
+      const errorText = await longLivedTokenResponse.text();
+      console.error('Instagram OAuth Callback - Error obteniendo token de larga duración:', errorText);
+      return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/dashboard?error=instagram_long_lived_token_error`);
+    }
+    
+    const longLivedTokenData = await longLivedTokenResponse.json();
+    console.log('Instagram OAuth Callback - Token de larga duración obtenido:', !!longLivedTokenData.access_token);
+    
+    // Obtener cuentas de Instagram Business asociadas
+    console.log('Instagram OAuth Callback - Obteniendo cuentas de Instagram Business...');
+    
+    const accountsResponse = await fetch(`https://graph.facebook.com/v18.0/me/accounts?access_token=${longLivedTokenData.access_token}`);
+    
+    if (!accountsResponse.ok) {
+      const errorText = await accountsResponse.text();
+      console.error('Instagram OAuth Callback - Error obteniendo cuentas:', errorText);
+      return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/dashboard?error=instagram_accounts_error`);
+    }
+    
+    const accountsData = await accountsResponse.json();
+    console.log('Instagram OAuth Callback - Cuentas obtenidas:', accountsData);
+    
+    // Si no hay páginas, mostrar error
+    if (!accountsData.data || accountsData.data.length === 0) {
+      console.error('Instagram OAuth Callback - No se encontraron páginas de Facebook');
+      return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/dashboard?error=instagram_no_pages`);
+    }
+    
+    // Obtener Instagram Business Account para la primera página
+    const page = accountsData.data[0];
+    console.log('Instagram OAuth Callback - Usando página:', page.name);
+    
+    const instagramBusinessResponse = await fetch(`https://graph.facebook.com/v18.0/${page.id}?fields=instagram_business_account&access_token=${page.access_token}`);
+    
+    if (!instagramBusinessResponse.ok) {
+      const errorText = await instagramBusinessResponse.text();
+      console.error('Instagram OAuth Callback - Error obteniendo cuenta de Instagram Business:', errorText);
+      return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/dashboard?error=instagram_business_account_error`);
+    }
+    
+    const instagramBusinessData = await instagramBusinessResponse.json();
+    console.log('Instagram OAuth Callback - Datos de Instagram Business:', instagramBusinessData);
+    
+    if (!instagramBusinessData.instagram_business_account) {
+      console.error('Instagram OAuth Callback - No se encontró cuenta de Instagram Business');
+      return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/dashboard?error=instagram_no_business_account`);
+    }
 
     // Guardar o actualizar el canal en la base de datos
     console.log('Instagram OAuth Callback - Guardando canal en base de datos...');
@@ -102,7 +156,16 @@ export async function GET(request: NextRequest) {
             instagramUserId: userData.id,
             username: userData.username,
             accountType: userData.account_type,
-            accessToken: tokenData.access_token,
+            accessToken: longLivedTokenData.access_token,
+            permissions: ['instagram_basic', 'instagram_content_publish', 'pages_read_engagement', 'pages_manage_posts'],
+            instagram_business_account: instagramBusinessData.instagram_business_account,
+            pages: [
+              {
+                id: page.id,
+                name: page.name,
+                access_token: page.access_token
+              }
+            ]
           },
           isActive: true,
           updatedAt: new Date(),
@@ -123,7 +186,16 @@ export async function GET(request: NextRequest) {
             instagramUserId: userData.id,
             username: userData.username,
             accountType: userData.account_type,
-            accessToken: tokenData.access_token,
+            accessToken: longLivedTokenData.access_token,
+            permissions: ['instagram_basic', 'instagram_content_publish', 'pages_read_engagement', 'pages_manage_posts'],
+            instagram_business_account: instagramBusinessData.instagram_business_account,
+            pages: [
+              {
+                id: page.id,
+                name: page.name,
+                access_token: page.access_token
+              }
+            ]
           },
           isActive: true,
         },
