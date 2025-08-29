@@ -114,81 +114,15 @@ export async function GET(request: NextRequest) {
     console.log('Instagram OAuth Callback - Token a usar:', tokenType);
     console.log('Instagram OAuth Callback - Token presente:', !!accessTokenToUse);
     
-    // Obtener cuentas de Instagram Business asociadas
-    console.log('Instagram OAuth Callback - Obteniendo cuentas de Instagram Business...');
-    
-    const accountsResponse = await fetch(`https://graph.facebook.com/v18.0/me/accounts?access_token=${accessTokenToUse}`);
-    
-    if (!accountsResponse.ok) {
-      const errorText = await accountsResponse.text();
-      console.error('Instagram OAuth Callback - Error obteniendo cuentas:', errorText);
-      return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/dashboard?error=instagram_accounts_error`);
-    }
-    
-    const accountsData = await accountsResponse.json();
-    console.log('Instagram OAuth Callback - Cuentas obtenidas:', accountsData);
-    
-    // Si no hay páginas, mostrar error
-    if (!accountsData.data || accountsData.data.length === 0) {
-      console.error('Instagram OAuth Callback - No se encontraron páginas de Facebook');
-      return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/dashboard?error=instagram_no_pages`);
-    }
-    
-    // Obtener Instagram Business Account para la primera página
-    const page = accountsData.data[0];
-    console.log('Instagram OAuth Callback - Usando página:', page.name);
-    
-    // Obtener la cuenta de Instagram Business asociada a la página
-    let instagramBusinessData;
-    let instagramBusinessAccount = null;
-    
-    try {
-      const instagramBusinessResponse = await fetch(`https://graph.facebook.com/v18.0/${page.id}?fields=instagram_business_account&access_token=${page.access_token}`);
-      
-      if (instagramBusinessResponse.ok) {
-        instagramBusinessData = await instagramBusinessResponse.json();
-        console.log('Instagram OAuth Callback - Datos de Instagram Business:', instagramBusinessData);
-        
-        if (instagramBusinessData.instagram_business_account) {
-          instagramBusinessAccount = instagramBusinessData.instagram_business_account;
-          console.log('Instagram OAuth Callback - Cuenta de Instagram Business encontrada:', instagramBusinessAccount);
-        } else {
-          console.log('Instagram OAuth Callback - No se encontró una cuenta de Instagram Business para esta página');
-          
-          // Si no encontramos una cuenta de Instagram Business, intentamos usar la cuenta conectada directamente
-          console.log('Instagram OAuth Callback - Intentando usar la cuenta de Instagram conectada directamente');
-          instagramBusinessAccount = {
-            id: userData.id,
-            username: userData.username
-          };
-          console.log('Instagram OAuth Callback - Usando cuenta de Instagram directamente:', instagramBusinessAccount);
-        }
-      } else {
-        const errorText = await instagramBusinessResponse.text();
-        console.error('Instagram OAuth Callback - Error obteniendo cuenta de Instagram Business:', errorText);
-        
-        // Si hay un error en la API, intentamos usar la cuenta de Instagram conectada directamente
-        console.log('Instagram OAuth Callback - Intentando usar la cuenta conectada directamente debido a error de API');
-        instagramBusinessAccount = {
-          id: userData.id,
-          username: userData.username
-        };
-        console.log('Instagram OAuth Callback - Usando cuenta de Instagram directamente:', instagramBusinessAccount);
-      }
-    } catch (error) {
-      console.error('Instagram OAuth Callback - Error al obtener la cuenta de Instagram Business:', error);
-      
-      // En caso de error, intentamos usar la cuenta de Instagram conectada directamente
-      console.log('Instagram OAuth Callback - Intentando usar la cuenta conectada directamente debido a excepción');
-      instagramBusinessAccount = {
-        id: userData.id,
-        username: userData.username
-      };
-      console.log('Instagram OAuth Callback - Usando cuenta de Instagram directamente:', instagramBusinessAccount);
-    }
-    
-    // Si no tenemos una cuenta de Instagram Business, usamos la que creamos manualmente
-    instagramBusinessData = instagramBusinessData || { instagram_business_account: instagramBusinessAccount };
+         // Para Instagram, usamos directamente la cuenta conectada
+     console.log('Instagram OAuth Callback - Usando cuenta de Instagram directamente...');
+     
+     const instagramBusinessAccount = {
+       id: userData.id,
+       username: userData.username
+     };
+     
+     console.log('Instagram OAuth Callback - Cuenta de Instagram configurada:', instagramBusinessAccount);
 
     // Guardar o actualizar el canal en la base de datos
     console.log('Instagram OAuth Callback - Guardando canal en base de datos...');
@@ -220,14 +154,7 @@ export async function GET(request: NextRequest) {
             instagram_business_account: {
               id: userData.id, // Usar el ID real de Instagram
               username: userData.username
-            },
-            pages: [
-              {
-                id: page.id,
-                name: page.name,
-                access_token: page.access_token
-              }
-            ]
+            }
           },
           isActive: true,
           updatedAt: new Date(),
@@ -244,26 +171,19 @@ export async function GET(request: NextRequest) {
           accessToken: tokenData.access_token,
           refreshToken: tokenData.refresh_token || null,
           tokenExpiresAt: tokenData.expires_in ? new Date(Date.now() + tokenData.expires_in * 1000) : null,
-          meta: {
-            instagramUserId: userData.id,
-            username: userData.username,
-            accountType: userData.account_type,
-            accessToken: accessTokenToUse,
-            tokenType: tokenType,
-            longLivedTokenError: longLivedTokenError,
-            permissions: ['instagram_basic', 'instagram_content_publish'],
-            instagram_business_account: {
-              id: userData.id, // Usar el ID real de Instagram
-              username: userData.username
-              },
-            pages: [
-              {
-                id: page.id,
-                name: page.name,
-                access_token: page.access_token
+                      meta: {
+              instagramUserId: userData.id,
+              username: userData.username,
+              accountType: userData.account_type,
+              accessToken: accessTokenToUse,
+              tokenType: tokenType,
+              longLivedTokenError: longLivedTokenError,
+              permissions: ['instagram_basic', 'instagram_content_publish'],
+              instagram_business_account: {
+                id: userData.id, // Usar el ID real de Instagram
+                username: userData.username
               }
-            ]
-          },
+            },
           isActive: true,
         },
       });
