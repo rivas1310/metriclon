@@ -79,58 +79,59 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Token inválido' }, { status: 401 });
     }
 
-               // Para Instagram, necesitamos manejar tanto JSON como FormData
-      let reqData;
-      let mediaFile: File | null = null;
+    // Para Instagram, necesitamos manejar tanto JSON como FormData
+    let reqData;
+    let mediaFile: File | null = null;
+    
+    console.log('=== ANALIZANDO REQUEST ===');
+    console.log('Content-Type:', request.headers.get('content-type'));
+    console.log('¿Es multipart/form-data?', request.headers.get('content-type')?.includes('multipart/form-data'));
+    
+    if (request.headers.get('content-type')?.includes('multipart/form-data')) {
+      console.log('=== PROCESANDO FORMDATA ===');
+      const formData = await request.formData();
       
-      console.log('=== ANALIZANDO REQUEST ===');
-      console.log('Content-Type:', request.headers.get('content-type'));
-      console.log('¿Es multipart/form-data?', request.headers.get('content-type')?.includes('multipart/form-data'));
-      
-      if (request.headers.get('content-type')?.includes('multipart/form-data')) {
-        console.log('=== PROCESANDO FORMDATA ===');
-        const formData = await request.formData();
-        
-        // Log de todos los campos recibidos
-        console.log('Campos en FormData:');
-        for (const [key, value] of formData.entries()) {
-          if (value instanceof File) {
-            console.log(`${key}:`, {
-              name: value.name,
-              type: value.type,
-              size: value.size,
-              isFile: true
-            });
-          } else {
-            console.log(`${key}:`, value);
-          }
+      // Log de todos los campos recibidos
+      console.log('Campos en FormData:');
+      const entries = Array.from(formData.entries());
+      for (const [key, value] of entries) {
+        if (value instanceof File) {
+          console.log(`${key}:`, {
+            name: value.name,
+            type: value.type,
+            size: value.size,
+            isFile: true
+          });
+        } else {
+          console.log(`${key}:`, value);
         }
-        
-        reqData = {
-          organizationId: formData.get('organizationId') as string,
-          channelId: formData.get('channelId') as string,
-          content: formData.get('content') as string,
-          caption: formData.get('caption') as string,
-          type: formData.get('type') as string || 'TEXT',
-          scheduledFor: formData.get('scheduledFor') as string || null,
-          platform: formData.get('platform') as string
-        };
-        mediaFile = formData.get('media') as File || null;
-        
-        console.log('=== DATOS EXTRAÍDOS ===');
-        console.log('reqData:', reqData);
-        console.log('mediaFile:', mediaFile ? {
-          name: mediaFile.name,
-          type: mediaFile.type,
-          size: mediaFile.size
-        } : 'null');
-      } else {
-        console.log('=== PROCESANDO JSON ===');
-        reqData = await request.json();
-        console.log('reqData (JSON):', reqData);
       }
-     
-     const { organizationId, channelId, content, caption, type = 'TEXT', scheduledFor = null, platform } = reqData;
+      
+      reqData = {
+        organizationId: formData.get('organizationId') as string,
+        channelId: formData.get('channelId') as string,
+        content: formData.get('content') as string,
+        caption: formData.get('caption') as string,
+        type: formData.get('type') as string || 'TEXT',
+        scheduledFor: formData.get('scheduledFor') as string || null,
+        platform: formData.get('platform') as string
+      };
+      mediaFile = formData.get('media') as File || null;
+      
+      console.log('=== DATOS EXTRAÍDOS ===');
+      console.log('reqData:', reqData);
+      console.log('mediaFile:', mediaFile ? {
+        name: mediaFile.name,
+        type: mediaFile.type,
+        size: mediaFile.size
+      } : 'null');
+    } else {
+      console.log('=== PROCESANDO JSON ===');
+      reqData = await request.json();
+      console.log('reqData (JSON):', reqData);
+    }
+    
+    const { organizationId, channelId, content, caption, type = 'TEXT', scheduledFor = null, platform } = reqData;
     
     // Inicializar variables para evitar errores de "used before declaration"
     let post = null;
@@ -785,7 +786,7 @@ export async function POST(request: NextRequest) {
                    'Content-Type': 'application/json',
                  },
                  body: JSON.stringify({
-                   url: placeholderImageUrl,
+                   url: "https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?w=1080&h=1080&fit=crop&crop=center",
                    caption: message, // Usar el mensaje preparado (caption || content)
                    access_token: page.access_token,
                  }),
