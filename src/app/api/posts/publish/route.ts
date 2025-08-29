@@ -316,6 +316,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Crear el post en nuestra base de datos
+    console.log('=== GUARDANDO POST EN BASE DE DATOS ===');
+    
     const post = await prisma.post.create({
       data: {
         organizationId,
@@ -325,17 +327,14 @@ export async function POST(request: NextRequest) {
         status: scheduledFor && new Date(scheduledFor) > new Date() ? 'SCHEDULED' : 'PUBLISHED',
         scheduledAt: scheduledFor ? new Date(scheduledFor) : null,
         publishedAt: scheduledFor && new Date(scheduledFor) > new Date() ? null : new Date(),
-        externalPostId: facebookData.id,
+        externalPostId: postId || '',
         createdBy: decoded.userId,
         meta: {
-          facebookPostId: facebookData.id,
-          pageId: page.id,
-          pageName: page.name,
+          externalPostId: postId,
           isRealPost: true,
-          platform: 'FACEBOOK',
+          platform: channel.platform,
           channelName: channel.name,
-          publishData: publishData,
-          facebookResponse: facebookData
+          publishData: publishData
         },
       },
     });
@@ -345,10 +344,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       post,
-      facebookData,
       message: scheduledFor && new Date(scheduledFor) > new Date() 
-        ? 'Post programado exitosamente en Facebook' 
-        : 'Post publicado exitosamente en Facebook',
+        ? `Post programado exitosamente en ${channel.platform}` 
+        : `Post publicado exitosamente en ${channel.platform}`
     });
 
   } catch (error) {
