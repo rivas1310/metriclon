@@ -1,27 +1,4 @@
-# Estrategia: incluir solo lo mínimo necesario
-*
-
-# Archivos esenciales para la build
-!package.json
-!package-lock.json
-!next.config.js
-!tsconfig.json
-!postcss.config.js
-!tailwind.config.js
-!next-env.d.ts
-
-# Código fuente esencial
-!src/app/
-!src/components/
-!src/lib/
-!src/hooks/
-!public/
-
-# Prisma (incluir toda la carpeta)
-!prisma/
-!.env
-
-# Ignorar explícitamente directorios problemáticos
+# Ignorar todo excepto lo esencial
 node_modules
 .next
 .git
@@ -31,4 +8,7 @@ node_modules
 .DS_Store
 *.log
 *.tmp
-.vercel
+ssl/
+docker-compose.yml
+Dockerfile
+.dockerignore

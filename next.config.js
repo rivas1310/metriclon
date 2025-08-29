@@ -1,19 +1,23 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Configuración ultra-mínima para evitar problemas en Vercel
+  // Configuración básica
+  reactStrictMode: true,
   swcMinify: true,
+  
+  // Ignorar errores durante la compilación
   typescript: {
     ignoreBuildErrors: true,
   },
   eslint: {
     ignoreDuringBuilds: true,
   },
+  
+  // Optimización de imágenes
   images: {
     unoptimized: true,
   },
-  // Desactivar completamente características que pueden causar problemas
-  experimental: {},
-  // Configuración para evitar problemas de recursión
+  
+  // Configuración para Vercel
   output: 'standalone',
 };
 
