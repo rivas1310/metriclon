@@ -462,10 +462,16 @@ export async function POST(request: NextRequest) {
           }
         }
         
-        // Usar el ID de Instagram que tengamos disponible
-        const igId = meta?.instagramUserId || instagramBusinessId;
-        
-        if (igId) {
+                      // Usar el ID de Instagram que tengamos disponible
+       const igId = meta?.instagramUserId || (meta?.instagram_business_account?.id !== channel.id ? meta?.instagram_business_account?.id : null);
+       
+       console.log('=== ID FINAL PARA PUBLICACIÓN ===');
+       console.log('meta.instagramUserId:', meta?.instagramUserId);
+       console.log('meta.instagram_business_account.id:', meta?.instagram_business_account?.id);
+       console.log('channel.id:', channel.id);
+       console.log('ID final seleccionado:', igId);
+       
+       if (igId) {
           console.log('Publicando en Instagram con ID:', igId);
           
           // Primero creamos el contenedor de medios
@@ -477,11 +483,11 @@ export async function POST(request: NextRequest) {
             headers: {
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify({
-              image_url: placeholderImageUrl,
-              caption: message, // Usar el mensaje preparado (caption || content)
-              access_token: meta.access_token,
-            }),
+                       body: JSON.stringify({
+             image_url: placeholderImageUrl,
+             caption: message, // Usar el mensaje preparado (caption || content)
+             access_token: meta.access_token || channel.accessToken, // Usar el token del canal como fallback
+           }),
           });
           
           const mediaResponseText = await mediaResponse.text();
@@ -503,10 +509,10 @@ export async function POST(request: NextRequest) {
                   headers: {
                     'Content-Type': 'application/json',
                   },
-                  body: JSON.stringify({
-                    creation_id: mediaData.id,
-                    access_token: meta.access_token,
-                  }),
+                                   body: JSON.stringify({
+                   creation_id: mediaData.id,
+                   access_token: meta.access_token || channel.accessToken, // Usar el token del canal como fallback
+                 }),
                 });
                 
                 const publishResponseText = await publishResponse.text();
