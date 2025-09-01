@@ -20,6 +20,8 @@ export async function GET(request: NextRequest) {
     console.log('Code:', code);
     console.log('State:', state);
     console.log('Error:', error);
+    console.log('URL completa:', request.url);
+    console.log('Search params:', Object.fromEntries(searchParams.entries()));
 
     if (error) {
       return NextResponse.redirect(
@@ -71,42 +73,61 @@ export async function GET(request: NextRequest) {
     const userData = await userResponse.json();
     console.log('User Data:', userData);
 
-    // Crear o actualizar el canal de TikTok
-    const channel = await prisma.channel.upsert({
-      where: {
-        platform_organizationId: {
+    console.log('=== INTENTANDO GUARDAR TIKTOK ===');
+    console.log('Organization ID a usar:', organizationId);
+    console.log('Platform:', 'TIKTOK');
+    console.log('User data:', userData.data?.user);
+    
+    try {
+      // Crear o actualizar el canal de TikTok
+      const channel = await prisma.channel.upsert({
+        where: {
+          platform_organizationId: {
+            platform: 'TIKTOK',
+            organizationId: organizationId,
+          },
+        },
+        update: {
+          accessToken: access_token,
+          refreshToken: refresh_token,
+          isActive: true,
+          meta: {
+            openId: open_id,
+            scope: scope,
+            userInfo: userData.data?.user || {},
+            accessToken: access_token,
+            refreshToken: refresh_token,
+          },
+        },
+        create: {
           platform: 'TIKTOK',
+          name: userData.data?.user?.display_name || 'TikTok Account',
+          accessToken: access_token,
+          refreshToken: refresh_token,
+          isActive: true,
           organizationId: organizationId,
+          meta: {
+            openId: open_id,
+            scope: scope,
+            userInfo: userData.data?.user || {},
+            accessToken: access_token,
+            refreshToken: refresh_token,
+          },
         },
-      },
-      update: {
-        accessToken: access_token,
-        refreshToken: refresh_token,
-        isActive: true,
-        meta: {
-          openId: open_id,
-          scope: scope,
-          userInfo: userData.data?.user || {},
-          accessToken: access_token,
-          refreshToken: refresh_token,
-        },
-      },
-      create: {
-        platform: 'TIKTOK',
-        name: userData.data?.user?.display_name || 'TikTok Account',
-        accessToken: access_token,
-        refreshToken: refresh_token,
-        isActive: true,
-        organizationId: organizationId,
-        meta: {
-          openId: open_id,
-          scope: scope,
-          userInfo: userData.data?.user || {},
-          accessToken: access_token,
-          refreshToken: refresh_token,
-        },
-      },
-    });
+      });
+      
+      console.log('✅ Canal de TikTok creado/actualizado exitosamente:', channel.id);
+      console.log('Canal completo:', channel);
+      
+    } catch (dbError) {
+      console.error('❌ ERROR AL GUARDAR EN BASE DE DATOS:', dbError);
+      console.error('Error details:', {
+        message: dbError.message,
+        code: dbError.code,
+        meta: dbError.meta
+      });
+      throw dbError;
+    }
 
     console.log('Canal de TikTok creado/actualizado:', channel.id);
 
