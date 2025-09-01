@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
     if (tiktokConfig.TIKTOK_CLIENT_ID && tiktokConfig.TIKTOK_REDIRECT_URI) {
       const authUrl = new URL('https://www.tiktok.com/v2/auth/authorize/');
       authUrl.searchParams.set('client_key', tiktokConfig.TIKTOK_CLIENT_ID);
-      authUrl.searchParams.set('scope', 'user.info.basic,video.publish,user.info.profile');
+      authUrl.searchParams.set('scope', 'user.info.basic,video.upload');
       authUrl.searchParams.set('response_type', 'code');
       authUrl.searchParams.set('redirect_uri', tiktokConfig.TIKTOK_REDIRECT_URI);
       authUrl.searchParams.set('state', 'debug_test');
