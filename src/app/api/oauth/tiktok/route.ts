@@ -2,6 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(request: NextRequest) {
   try {
+    const { searchParams } = new URL(request.url);
+    const organizationId = searchParams.get('organizationId');
+    
+    if (!organizationId) {
+      return NextResponse.json({ 
+        error: 'Organization ID es requerido' 
+      }, { status: 400 });
+    }
+    
     const clientId = process.env.TIKTOK_CLIENT_ID;
     const redirectUri = process.env.TIKTOK_REDIRECT_URI;
     
@@ -17,7 +26,9 @@ export async function GET(request: NextRequest) {
     authUrl.searchParams.append('scope', 'user.info.basic,video.publish,user.info.profile');
     authUrl.searchParams.append('response_type', 'code');
     authUrl.searchParams.append('redirect_uri', redirectUri);
-    authUrl.searchParams.append('state', 'tiktok_auth');
+    // Incluir el organizationId en el state para pasarlo al callback
+    const state = `tiktok_auth_${organizationId}`;
+    authUrl.searchParams.append('state', state);
     
     console.log('=== INICIANDO OAUTH TIKTOK ===');
     console.log('Client ID:', clientId);

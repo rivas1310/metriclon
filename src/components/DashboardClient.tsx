@@ -687,10 +687,10 @@ export function DashboardClient() {
                     </div>
                     
                     <button
-                      onClick={() => {
-                        // Función simple para conectar TikTok
-                        window.open('/api/oauth/tiktok', '_blank');
-                      }}
+                                           onClick={() => {
+                       // Función simple para conectar TikTok con organizationId
+                       window.open(`/api/oauth/tiktok?organizationId=${selectedOrganization || ''}`, '_blank');
+                     }}
                       className="w-full px-6 py-3 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors"
                     >
                       Conectar TikTok

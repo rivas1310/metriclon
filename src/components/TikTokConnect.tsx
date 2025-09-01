@@ -17,8 +17,8 @@ export default function TikTokConnect({ organizationId, onConnect }: TikTokConne
       setConnectionStatus('connecting');
       setErrorMessage('');
 
-      // Iniciar el flujo de OAuth de TikTok
-      const response = await fetch('/api/oauth/tiktok');
+      // Iniciar el flujo de OAuth de TikTok con el organizationId
+      const response = await fetch(`/api/oauth/tiktok?organizationId=${organizationId}`);
       if (!response.ok) {
         throw new Error('Error iniciando conexión con TikTok');
       }

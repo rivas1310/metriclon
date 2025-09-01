@@ -8,6 +8,14 @@ export async function GET(request: NextRequest) {
     const state = searchParams.get('state');
     const error = searchParams.get('error');
     
+    // Extraer el organizationId del state
+    let organizationId = 'default';
+    if (state && state.startsWith('tiktok_auth_')) {
+      organizationId = state.replace('tiktok_auth_', '');
+    }
+    
+    console.log('Organization ID extraído:', organizationId);
+    
     console.log('=== CALLBACK TIKTOK OAUTH ===');
     console.log('Code:', code);
     console.log('State:', state);
@@ -68,7 +76,7 @@ export async function GET(request: NextRequest) {
       where: {
         platform_organizationId: {
           platform: 'TIKTOK',
-          organizationId: 'default', // Cambiar por el ID real de la organización
+          organizationId: organizationId,
         },
       },
       update: {
@@ -89,7 +97,7 @@ export async function GET(request: NextRequest) {
         accessToken: access_token,
         refreshToken: refresh_token,
         isActive: true,
-        organizationId: 'default', // Cambiar por el ID real de la organización
+        organizationId: organizationId,
         meta: {
           openId: open_id,
           scope: scope,
