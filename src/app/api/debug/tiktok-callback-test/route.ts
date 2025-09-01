@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
     try {
              const testChannel = await prisma.channel.create({
          data: {
-           platform: 'TIKTOK_TEST',
+           platform: 'TIKTOK', // VALOR VÁLIDO DEL ENUM
            externalId: 'test_external_id', // CAMPO OBLIGATORIO
            name: 'Test TikTok',
            isActive: true,
