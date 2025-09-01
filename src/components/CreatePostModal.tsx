@@ -272,11 +272,15 @@ export function CreatePostModal({ isOpen, onClose, organizationId, channels, onP
               Seleccionar plataformas
             </label>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-              {/* Debug: Mostrar información de canales */}
-              <div className="col-span-full mb-2 p-2 bg-gray-100 rounded text-xs">
-                <strong>Debug:</strong> {channels.length} canales disponibles | 
-                TikTok: {channels.find(c => c.platform === 'TIKTOK') ? 'ENCONTRADO' : 'NO ENCONTRADO'}
-              </div>
+                             {/* Debug: Mostrar información de canales */}
+               <div className="col-span-full mb-2 p-2 bg-gray-100 rounded text-xs">
+                 <strong>Debug:</strong> {channels.length} canales disponibles | 
+                 TikTok: {channels.find(c => c.platform === 'TIKTOK') ? 'ENCONTRADO' : 'NO ENCONTRADO'}
+                 <br />
+                 <strong>Canales:</strong> {channels.map(c => `${c.platform}(${c.isConnected ? '✓' : '✗'})`).join(', ')}
+                 <br />
+                 <strong>Organization ID:</strong> {organizationId}
+               </div>
               {channels.map((channel) => (
                 <button
                   key={channel.id}
@@ -305,8 +309,19 @@ export function CreatePostModal({ isOpen, onClose, organizationId, channels, onP
                 </button>
               ))}
               
-              {/* Botón de TikTok manual para testing */}
-              {!channels.find(c => c.platform === 'TIKTOK') && (
+                             {/* Botón de TikTok manual para testing */}
+               {!channels.find(c => c.platform === 'TIKTOK') && (
+                 <div className="col-span-full mb-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs">
+                   <strong>⚠️ TikTok no encontrado en canales:</strong>
+                   <br />
+                   - Canales disponibles: {channels.map(c => c.platform).join(', ')}
+                   <br />
+                   - Buscando: TIKTOK
+                   <br />
+                   - ¿Plataforma en mayúsculas?
+                 </div>
+               )}
+               {!channels.find(c => c.platform === 'TIKTOK') && (
                 <button
                   type="button"
                   onClick={() => handlePlatformToggle('TIKTOK')}
