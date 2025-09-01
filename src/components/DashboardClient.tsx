@@ -632,53 +632,83 @@ export function DashboardClient() {
           <div className="space-y-8">
             <Analytics organizationId={selectedOrganization || ''} />
             
-            {/* TikTok Video Upload - Solo mostrar si está conectado */}
-            {channelsData?.find((c: Channel) => c.platform === 'TIKTOK' && c.isConnected) ? (
-              <TikTokVideoUpload 
-                organizationId={selectedOrganization || ''} 
-                onVideoUploaded={(result) => {
-                  console.log('Video subido:', result);
-                  // Aquí puedes agregar lógica adicional después de subir el video
+            {/* Botón de debug temporal */}
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+              <h4 className="text-sm font-medium text-yellow-800 mb-2">🔍 Debug TikTok</h4>
+              <p className="text-xs text-yellow-700 mb-3">
+                Organization ID: {selectedOrganization || 'NO DISPONIBLE'} | 
+                Channels: {channelsData?.length || 0} | 
+                TikTok: {channelsData?.find((c: Channel) => c.platform === 'TIKTOK') ? 'ENCONTRADO' : 'NO ENCONTRADO'}
+              </p>
+              <button
+                onClick={() => {
+                  const tiktokChannel = channelsData?.find((c: Channel) => c.platform === 'TIKTOK');
+                  console.log('=== DEBUG TIKTOK ===');
+                  console.log('Organization ID:', selectedOrganization);
+                  console.log('Channels Data:', channelsData);
+                  console.log('TikTok Channel:', tiktokChannel);
+                  alert(`TikTok: ${tiktokChannel ? 'CONECTADO' : 'NO CONECTADO'}`);
                 }}
-              />
-            ) : (
-              /* TikTok Inline - Componente directo */
-              <div className="bg-white rounded-lg shadow">
-                <div className="px-6 py-4 border-b border-gray-200">
-                  <h3 className="text-lg font-medium text-gray-900">🎵 TikTok</h3>
-                  <p className="text-sm text-gray-500 mt-1">Conecta tu cuenta de TikTok</p>
-                </div>
-                <div className="p-6">
-                  <div className="text-center py-8 text-gray-500 mb-6">
-                    <div className="w-16 h-16 bg-black rounded-full flex items-center justify-center mx-auto mb-4">
-                      <span className="text-white text-2xl font-bold">T</span>
+                className="px-3 py-1 bg-yellow-600 text-white text-xs rounded hover:bg-yellow-700"
+              >
+                Ver Estado TikTok
+              </button>
+            </div>
+            
+            {/* TikTok Video Upload - Solo mostrar si está conectado */}
+            {(() => {
+              const tiktokChannel = channelsData?.find((c: Channel) => c.platform === 'TIKTOK' && c.isConnected);
+              console.log('TikTok Channel encontrado:', tiktokChannel);
+              console.log('Channels Data:', channelsData);
+              console.log('Selected Organization:', selectedOrganization);
+              
+              return tiktokChannel ? (
+                <TikTokVideoUpload 
+                  organizationId={selectedOrganization || ''} 
+                  onVideoUploaded={(result) => {
+                    console.log('Video subido:', result);
+                    // Aquí puedes agregar lógica adicional después de subir el video
+                  }}
+                />
+              ) : (
+                /* TikTok Inline - Componente directo */
+                <div className="bg-white rounded-lg shadow">
+                  <div className="px-6 py-4 border-b border-gray-200">
+                    <h3 className="text-lg font-medium text-gray-900">🎵 TikTok</h3>
+                    <p className="text-sm text-gray-500 mt-1">Conecta tu cuenta de TikTok</p>
+                  </div>
+                  <div className="p-6">
+                    <div className="text-center py-8 text-gray-500 mb-6">
+                      <div className="w-16 h-16 bg-black rounded-full flex items-center justify-center mx-auto mb-4">
+                        <span className="text-white text-2xl font-bold">T</span>
+                      </div>
+                      <p className="text-lg font-medium text-gray-900 mb-2">Conecta TikTok</p>
+                      <p className="text-gray-500">Vincula tu cuenta para acceder a métricas</p>
                     </div>
-                    <p className="text-lg font-medium text-gray-900 mb-2">Conecta TikTok</p>
-                    <p className="text-gray-500">Vincula tu cuenta para acceder a métricas</p>
-                  </div>
-                  
-                  <button
-                    onClick={() => {
-                      // Función simple para conectar TikTok
-                      window.open('/api/oauth/tiktok', '_blank');
-                    }}
-                    className="w-full px-6 py-3 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors"
-                  >
-                    Conectar TikTok
-                  </button>
-                  
-                  <div className="mt-4 p-4 bg-blue-50 rounded-lg">
-                    <h4 className="text-sm font-medium text-blue-900 mb-2">¿Qué puedes hacer?</h4>
-                    <ul className="text-sm text-blue-700 space-y-1">
-                      <li>• Ver métricas de seguidores y engagement</li>
-                      <li>• Analizar rendimiento de videos</li>
-                      <li>• Gestionar contenido desde un panel centralizado</li>
-                      <li>• Subir y publicar videos directamente</li>
-                    </ul>
+                    
+                    <button
+                      onClick={() => {
+                        // Función simple para conectar TikTok
+                        window.open('/api/oauth/tiktok', '_blank');
+                      }}
+                      className="w-full px-6 py-3 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors"
+                    >
+                      Conectar TikTok
+                    </button>
+                    
+                    <div className="mt-4 p-4 bg-blue-50 rounded-lg">
+                      <h4 className="text-sm font-medium text-blue-900 mb-2">¿Qué puedes hacer?</h4>
+                      <ul className="text-sm text-blue-700 space-y-1">
+                        <li>• Ver métricas de seguidores y engagement</li>
+                        <li>• Analizar rendimiento de videos</li>
+                        <li>• Gestionar contenido desde un panel centralizado</li>
+                        <li>• Subir y publicar videos directamente</li>
+                      </ul>
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
           </div>
         )}
 

@@ -44,6 +44,13 @@ export function CreatePostModal({ isOpen, onClose, organizationId, channels, onP
        return;
      }
 
+     // Validar que TikTok tenga contenido multimedia
+     if (formData.platforms.includes('TIKTOK') && formData.images.length === 0) {
+       setError('TikTok requiere un video para publicar. Los posts solo de texto no son soportados.');
+       setIsLoading(false);
+       return;
+     }
+
     try {
       // Intentar publicación real primero (Facebook e Instagram)
       const selectedChannel = channels.find(ch => ch.platform === formData.platforms[0]);
@@ -62,8 +69,8 @@ export function CreatePostModal({ isOpen, onClose, organizationId, channels, onP
         scheduledFor: formData.scheduledFor || null,
       });
 
-       // Publicar en Facebook o Instagram
-       if (selectedChannel?.platform === 'FACEBOOK' || selectedChannel?.platform === 'INSTAGRAM') {
+       // Publicar en Facebook, Instagram o TikTok
+       if (selectedChannel?.platform === 'FACEBOOK' || selectedChannel?.platform === 'INSTAGRAM' || selectedChannel?.platform === 'TIKTOK') {
          let publishResponse;
          
          // Para Instagram Y Facebook, enviar FormData si hay imágenes
@@ -82,10 +89,20 @@ export function CreatePostModal({ isOpen, onClose, organizationId, channels, onP
            console.log('¿Tiene imagen?', formData.images.length > 0);
            console.log('Tipo de archivo:', formData.images[0]?.type);
            
-           publishResponse = await fetch('/api/posts/publish', {
-             method: 'POST',
-             body: formDataToSend,
-           });
+           // Para TikTok, usar la API específica de TikTok
+           if (selectedChannel.platform === 'TIKTOK') {
+             console.log('=== PUBLICANDO EN TIKTOK ===');
+             publishResponse = await fetch('/api/tiktok/publish-video', {
+               method: 'POST',
+               body: formDataToSend,
+             });
+           } else {
+             // Para Facebook e Instagram, usar la API general
+             publishResponse = await fetch('/api/posts/publish', {
+               method: 'POST',
+               body: formDataToSend,
+             });
+           }
          } else {
            // Sin imágenes, usar JSON para ambas plataformas
            console.log('=== ENVIANDO JSON (SOLO TEXTO) ===');
@@ -183,6 +200,16 @@ export function CreatePostModal({ isOpen, onClose, organizationId, channels, onP
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const files = Array.from(e.target.files);
+      
+      // Validación específica para TikTok
+      if (formData.platforms.includes('TIKTOK')) {
+        const hasVideo = files.some(file => file.type.startsWith('video/'));
+        if (!hasVideo) {
+          alert('TikTok requiere al menos un video para publicar. Por favor, selecciona un archivo de video.');
+          return;
+        }
+      }
+      
       setFormData(prev => ({
         ...prev,
         images: [...prev.images, ...files]
@@ -245,6 +272,11 @@ export function CreatePostModal({ isOpen, onClose, organizationId, channels, onP
               Seleccionar plataformas
             </label>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              {/* Debug: Mostrar información de canales */}
+              <div className="col-span-full mb-2 p-2 bg-gray-100 rounded text-xs">
+                <strong>Debug:</strong> {channels.length} canales disponibles | 
+                TikTok: {channels.find(c => c.platform === 'TIKTOK') ? 'ENCONTRADO' : 'NO ENCONTRADO'}
+              </div>
               {channels.map((channel) => (
                 <button
                   key={channel.id}
@@ -272,6 +304,25 @@ export function CreatePostModal({ isOpen, onClose, organizationId, channels, onP
                   )}
                 </button>
               ))}
+              
+              {/* Botón de TikTok manual para testing */}
+              {!channels.find(c => c.platform === 'TIKTOK') && (
+                <button
+                  type="button"
+                  onClick={() => handlePlatformToggle('TIKTOK')}
+                  className={`p-3 rounded-lg border-2 transition-colors ${
+                    formData.platforms.includes('TIKTOK')
+                      ? 'border-blue-500 bg-blue-50 text-blue-700'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <div className="flex items-center space-x2">
+                    <span className="text-lg">🎵</span>
+                    <span className="font-medium capitalize">TikTok</span>
+                  </div>
+                  <div className="text-xs text-orange-600 mt-1">⚠️ No conectado</div>
+                </button>
+              )}
             </div>
           </div>
 
@@ -324,23 +375,28 @@ export function CreatePostModal({ isOpen, onClose, organizationId, channels, onP
                Imágenes {formData.platforms.includes('INSTAGRAM') && <span className="text-red-500">*</span>}
              </label>
              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-               <input
-                 type="file"
-                 multiple
-                 accept="image/*,video/*"
-                 onChange={handleImageUpload}
-                 className="hidden"
-                 id="image-upload"
-                 required={formData.platforms.includes('INSTAGRAM')}
-               />
+                            <input
+               type="file"
+               multiple
+               accept="image/*,video/*"
+               onChange={handleImageUpload}
+               className="hidden"
+               id="image-upload"
+               required={formData.platforms.includes('INSTAGRAM') || formData.platforms.includes('TIKTOK')}
+             />
                <label htmlFor="image-upload" className="cursor-pointer">
                  <Image className="h-12 w-12 text-gray-400 mx-auto mb-2" />
-                 <p className="text-sm text-gray-600">
-                   Haz clic para subir imágenes o arrastra y suelta
-                 </p>
-                 <p className="text-xs text-gray-500 mt-1">
-                   PNG, JPG, WebP, MP4, AVI, MOV hasta 10MB
-                 </p>
+                                <p className="text-sm text-gray-600">
+                 Haz clic para subir imágenes o arrastra y suelta
+               </p>
+               <p className="text-xs text-gray-500 mt-1">
+                 PNG, JPG, WebP, MP4, AVI, MOV hasta 10MB
+                 {formData.platforms.includes('TIKTOK') && (
+                   <span className="block text-blue-600 font-medium">
+                     🎵 TikTok: Solo videos (MP4, MOV, AVI)
+                   </span>
+                 )}
+               </p>
                  {formData.platforms.includes('INSTAGRAM') && (
                    <p className="text-xs text-red-500 mt-1 font-medium">
                      ⚠️ Instagram requiere una imagen o video

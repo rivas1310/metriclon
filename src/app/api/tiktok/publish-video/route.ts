@@ -48,17 +48,58 @@ export async function POST(request: NextRequest) {
     console.log('Privacy Level:', privacyLevel);
     console.log('Scheduled Time:', scheduledTime);
 
-    // Aquí implementarías la lógica de publicación directa a TikTok
-    // Usando la Content Posting API con scope video.publish
+    // Implementar la lógica real de TikTok usando Content Posting API
+    console.log('Iniciando publicación directa a TikTok...');
+    
+    // Para video.publish (publicación directa), usamos la API de TikTok
+    const publishData = {
+      post_info: {
+        title: caption,
+        privacy_level: privacyLevel,
+        disable_duet: false,
+        disable_comment: false,
+        disable_stitch: false,
+      },
+      source_info: {
+        source: 'FILE_UPLOAD',
+        video_size: videoFile.size,
+        chunk_size: 1024 * 1024, // 1MB chunks
+      }
+    };
+
+    // Si hay programación, agregar timestamp
+    if (scheduledTime) {
+      publishData.post_info['scheduled_publish_time'] = Math.floor(new Date(scheduledTime).getTime() / 1000);
+    }
+
+    const tiktokResponse = await fetch('https://open.tiktokapis.com/v2/video/publish/', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${tiktokChannel.accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(publishData)
+    });
+
+    if (!tiktokResponse.ok) {
+      const errorData = await tiktokResponse.json();
+      console.error('Error de TikTok API:', errorData);
+      return NextResponse.json({ 
+        error: `Error de TikTok: ${errorData.error?.message || 'Error desconocido'}` 
+      }, { status: 400 });
+    }
+
+    const tiktokData = await tiktokResponse.json();
     
     const publishResult = {
       success: true,
-      videoId: `tiktok_published_${Date.now()}`,
+      videoId: tiktokData.data?.video_id || `tiktok_published_${Date.now()}`,
       status: scheduledTime ? 'scheduled' : 'published',
       message: scheduledTime ? 'Video programado para publicación' : 'Video publicado exitosamente en TikTok',
       channelId: tiktokChannel.id,
       organizationId,
-      scheduledTime: scheduledTime || null
+      scheduledTime: scheduledTime || null,
+      tiktokResponse: tiktokData
     };
 
     console.log('Resultado de publicación:', publishResult);

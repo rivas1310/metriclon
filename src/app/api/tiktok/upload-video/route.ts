@@ -46,16 +46,50 @@ export async function POST(request: NextRequest) {
     console.log('Canal TikTok encontrado:', tiktokChannel.id);
     console.log('Access Token disponible:', !!tiktokChannel.accessToken);
 
-    // Aquí implementarías la lógica de subida a TikTok
-    // Por ahora, simulamos la respuesta exitosa
+    // Implementar la lógica real de TikTok usando Content Posting API
+    console.log('Iniciando subida a TikTok...');
+    
+    // Para video.upload (borrador), usamos la API de TikTok
+    const tiktokResponse = await fetch('https://open.tiktokapis.com/v2/video/upload/', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${tiktokChannel.accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        post_info: {
+          title: caption,
+          privacy_level: privacyLevel,
+          disable_duet: false,
+          disable_comment: false,
+          disable_stitch: false,
+        },
+        source_info: {
+          source: 'FILE_UPLOAD',
+          video_size: videoFile.size,
+          chunk_size: 1024 * 1024, // 1MB chunks
+        }
+      })
+    });
+
+    if (!tiktokResponse.ok) {
+      const errorData = await tiktokResponse.json();
+      console.error('Error de TikTok API:', errorData);
+      return NextResponse.json({ 
+        error: `Error de TikTok: ${errorData.error?.message || 'Error desconocido'}` 
+      }, { status: 400 });
+    }
+
+    const tiktokData = await tiktokResponse.json();
     
     const uploadResult = {
       success: true,
-      videoId: `tiktok_${Date.now()}`,
+      videoId: tiktokData.data?.video_id || `tiktok_${Date.now()}`,
       status: 'uploaded',
-      message: 'Video subido exitosamente a TikTok',
+      message: 'Video subido exitosamente a TikTok como borrador',
       channelId: tiktokChannel.id,
-      organizationId
+      organizationId,
+      tiktokResponse: tiktokData
     };
 
     console.log('Resultado de subida:', uploadResult);
