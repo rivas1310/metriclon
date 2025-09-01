@@ -42,6 +42,8 @@ export async function POST(request: NextRequest) {
     console.log('OAuth Connect - NEXT_PUBLIC_APP_URL:', process.env.NEXT_PUBLIC_APP_URL);
     console.log('OAuth Connect - INSTAGRAM_CLIENT_ID:', !!process.env.INSTAGRAM_CLIENT_ID);
     console.log('OAuth Connect - FACEBOOK_CLIENT_ID:', !!process.env.FACEBOOK_CLIENT_ID);
+    console.log('OAuth Connect - TIKTOK_CLIENT_ID:', !!process.env.TIKTOK_CLIENT_ID);
+    console.log('OAuth Connect - TIKTOK_REDIRECT_URI:', process.env.TIKTOK_REDIRECT_URI);
     
     // Configuración OAuth por plataforma
     const oauthConfigs = {
@@ -83,6 +85,12 @@ export async function POST(request: NextRequest) {
         redirectUri: `${process.env.NEXT_PUBLIC_APP_URL}/api/oauth/callback/youtube`,
         scope: 'https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube.readonly',
         authUrl: 'https://accounts.google.com/o/oauth2/v2/auth',
+      },
+      tiktok: {
+        clientId: process.env.TIKTOK_CLIENT_ID,
+        redirectUri: process.env.TIKTOK_REDIRECT_URI || `${process.env.NEXT_PUBLIC_APP_URL}/api/oauth/callback/tiktok`,
+        scope: 'user.info.basic,video.publish,user.info.profile',
+        authUrl: 'https://www.tiktok.com/v2/auth/authorize/',
       }
     };
 
@@ -113,7 +121,14 @@ export async function POST(request: NextRequest) {
 
     // Construir URL de autorización
     const authUrl = new URL(config.authUrl);
-    authUrl.searchParams.set('client_id', config.clientId);
+    
+    // Para TikTok, usar client_key en lugar de client_id
+    if (platform === 'tiktok') {
+      authUrl.searchParams.set('client_key', config.clientId);
+    } else {
+      authUrl.searchParams.set('client_id', config.clientId);
+    }
+    
     authUrl.searchParams.set('redirect_uri', config.redirectUri);
     authUrl.searchParams.set('scope', config.scope);
     authUrl.searchParams.set('response_type', 'code');
@@ -128,6 +143,7 @@ export async function POST(request: NextRequest) {
       authUrl.searchParams.set('access_type', 'offline');
       authUrl.searchParams.set('prompt', 'consent');
     }
+    // TikTok ya tiene todos los parámetros necesarios configurados arriba
 
     const response = {
       authUrl: authUrl.toString(),

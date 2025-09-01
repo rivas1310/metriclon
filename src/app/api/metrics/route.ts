@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyToken } from '@/lib/auth';
 import { getAllPlatformAnalytics, getFacebookAnalytics, getInstagramAnalytics } from '@/lib/socialMediaAPI';
+import { getTikTokAnalytics } from '@/lib/tiktokAPI';
 
 export async function GET(request: NextRequest) {
   try {
@@ -51,9 +52,9 @@ export async function GET(request: NextRequest) {
     if (platform) {
       whereChannels.platform = platform.toUpperCase();
     } else {
-      // Solo Facebook e Instagram por ahora
+      // Facebook, Instagram y TikTok
       whereChannels.platform = {
-        in: ['FACEBOOK', 'INSTAGRAM']
+        in: ['FACEBOOK', 'INSTAGRAM', 'TIKTOK']
       };
     }
 
@@ -82,7 +83,59 @@ export async function GET(request: NextRequest) {
     console.log(`🚀 Obteniendo métricas reales para ${channels.length} canales:`, 
       channels.map(c => `${c.platform}(${c.id})`));
     
-    const platformAnalytics = await getAllPlatformAnalytics(channels, days);
+    let platformAnalytics = await getAllPlatformAnalytics(channels, days);
+    
+    // Procesar canales de TikTok por separado
+    const tiktokChannels = channels.filter(c => c.platform === 'TIKTOK');
+    for (const tiktokChannel of tiktokChannels) {
+      try {
+        console.log(`🎵 Procesando canal de TikTok: ${tiktokChannel.id}`);
+        const tiktokData = await getTikTokAnalytics(tiktokChannel.accessToken);
+        
+        // Convertir formato de TikTok al formato estándar
+        const tiktokAnalytics = {
+          platform: 'TIKTOK',
+          accountInfo: {
+            id: tiktokChannel.id,
+            name: tiktokData.accountInfo.displayName,
+            username: tiktokData.accountInfo.username,
+            followers_count: tiktokData.accountInfo.followerCount,
+            fan_count: tiktokData.accountInfo.followerCount,
+            verified: tiktokData.accountInfo.isVerified,
+            avatar_url: tiktokData.accountInfo.avatarUrl,
+          },
+          insights: {
+            totalImpressions: tiktokData.metrics.totalViews,
+            totalReach: tiktokData.metrics.totalViews,
+            totalEngagement: tiktokData.metrics.totalLikes + tiktokData.metrics.totalComments + tiktokData.metrics.totalShares,
+            engagementRate: tiktokData.metrics.engagementRate,
+            postCount: tiktokData.metrics.videoCount,
+            dateRange: `${days} días`,
+          },
+          recentPosts: tiktokData.recentVideos.map(video => ({
+            id: video.id,
+            message: video.title,
+            description: video.description,
+            created_time: new Date(video.createTime * 1000).toISOString(),
+            type: 'video',
+            picture: video.coverImageUrl,
+            video_url: video.videoUrl,
+            likes: video.stats.likeCount,
+            comments: video.stats.commentCount,
+            shares: video.stats.shareCount,
+            views: video.stats.playCount,
+            downloads: video.stats.downloadCount,
+            tags: video.tags,
+          })),
+          dateRange: `${days} días`,
+        };
+        
+        platformAnalytics.push(tiktokAnalytics);
+        console.log(`✅ TikTok analytics agregados para canal: ${tiktokChannel.id}`);
+      } catch (error) {
+        console.error(`❌ Error procesando TikTok channel ${tiktokChannel.id}:`, error);
+      }
+    }
     
     console.log(`📊 Analytics obtenidos: ${platformAnalytics.length} plataformas`, 
       platformAnalytics.map(p => p.platform));

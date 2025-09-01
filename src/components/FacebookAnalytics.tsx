@@ -566,6 +566,179 @@ export function FacebookAnalytics({ organizationId, days = 30 }: FacebookAnalyti
              <button
                onClick={async () => {
                  try {
+                   // Test real usando el mismo código de la interfaz
+                   const response = await fetch('/api/debug/facebook-real-test');
+
+                   if (response.ok) {
+                     const data = await response.json();
+                     console.log('🔍 Test real de Facebook:', data);
+                     
+                     // Mostrar resultado detallado
+                     let message = `🔍 Test Real de Facebook:\n\n`;
+                     message += `Canal: ${data.channel.name}\n`;
+                     message += `Token: ${data.channel.tokenPreview}\n\n`;
+                     
+                     if (data.testResults.pages?.success) {
+                       message += `✅ Páginas: FUNCIONA\n`;
+                     } else {
+                       message += `❌ Páginas: FALLA\n`;
+                     }
+                     
+                     if (data.testResults.postsWithInsights?.success) {
+                       message += `✅ Posts con Insights: FUNCIONA\n`;
+                       message += `✅ Posts con Insights: FUNCIONA\n`;
+                       message += `   Posts encontrados: ${data.testResults.postsWithInsights.postsCount}\n`;
+                     } else {
+                       message += `❌ Posts con Insights: FALLA\n`;
+                     }
+                     
+                     if (data.testResults.personalProfile?.success) {
+                       message += `✅ Perfil Personal: FUNCIONA\n`;
+                     } else {
+                       message += `❌ Perfil Personal: FALLA\n`;
+                     }
+                     
+                     alert(message);
+                   } else {
+                     const error = await response.json();
+                     alert(`❌ Error en test real: ${error.error}`);
+                   }
+                 } catch (error) {
+                   console.error('Error en test real:', error);
+                   alert('Error en test real. Revisa la consola.');
+                 }
+               }}
+               className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm w-full"
+             >
+               🔍 Test Real de Facebook
+             </button>
+             
+             <button
+               onClick={async () => {
+                 try {
+                   // Verificar fuente de datos
+                   const response = await fetch('/api/debug/facebook-data-source');
+
+                   if (response.ok) {
+                     const data = await response.json();
+                     console.log('🔍 Análisis de fuente de datos:', data);
+                     
+                     // Mostrar resultado detallado
+                     let message = `🔍 Análisis de Fuente de Datos:\n\n`;
+                     message += `Canal: ${data.channel.name}\n\n`;
+                     
+                     message += `📊 Posts Almacenados:\n`;
+                     if (data.analysis.storedPosts.found) {
+                       message += `✅ ${data.analysis.storedPosts.count} posts encontrados\n`;
+                     } else {
+                       message += `❌ No hay posts almacenados\n`;
+                     }
+                     
+                     message += `\n🔑 Token Actual:\n`;
+                     message += `Longitud: ${data.analysis.currentToken.length} caracteres\n`;
+                     message += `¿Es placeholder? ${data.analysis.currentToken.isPlaceholder ? 'SÍ' : 'NO'}\n`;
+                     
+                     message += `\n🌐 API de Facebook:\n`;
+                     if (data.analysis.facebookAPI.basicAccess) {
+                       message += `✅ Acceso básico FUNCIONA\n`;
+                     } else {
+                       message += `❌ Acceso básico FALLA\n`;
+                     }
+                     
+                     message += `\n💡 Conclusión:\n`;
+                     message += data.conclusion;
+                     
+                     alert(message);
+                   } else {
+                     const error = await response.json();
+                     alert(`❌ Error en análisis: ${error.error}`);
+                   }
+                 } catch (error) {
+                   console.error('Error en análisis:', error);
+                   alert('Error en análisis. Revisa la consola.');
+                 }
+               }}
+               className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 text-sm w-full"
+             >
+               🔍 Analizar Fuente de Datos
+             </button>
+             
+             <button
+               onClick={async () => {
+                 try {
+                   // Test oficial de Facebook Graph API
+                   const response = await fetch('/api/debug/facebook-api-test');
+
+                   if (response.ok) {
+                     const data = await response.json();
+                     console.log('🔍 Test oficial de Facebook API:', data);
+                     
+                     // Mostrar resultado detallado
+                     let message = `🔍 Test Oficial de Facebook Insights API v18.0:\n\n`;
+                     message += `Canal: ${data.channel.name}\n`;
+                     message += `Token: ${data.channel.tokenPreview}\n\n`;
+                     
+                     message += `📋 Resultados:\n`;
+                     if (data.testResults.basicToken?.success) {
+                       message += `✅ Token Básico: FUNCIONA\n`;
+                     } else {
+                       message += `❌ Token Básico: FALLA\n`;
+                     }
+                     
+                     if (data.testResults.pages?.success) {
+                       message += `✅ Páginas: FUNCIONA\n`;
+                     } else {
+                       message += `❌ Páginas: FALLA\n`;
+                     }
+                     
+                     if (data.testResults.pageInsights?.success) {
+                       message += `✅ Métricas de Página: FUNCIONA\n`;
+                       message += `   Métricas: ${data.testResults.pageInsights.metrics.join(', ')}\n`;
+                     } else {
+                       message += `❌ Métricas de Página: FALLA\n`;
+                     }
+                     
+                     if (data.testResults.posts?.success) {
+                       message += `✅ Posts: FUNCIONA\n`;
+                       message += `   Posts encontrados: ${data.testResults.posts.postsCount}\n`;
+                     } else {
+                       message += `❌ Posts: FALLA\n`;
+                     }
+                     
+                     if (data.testResults.postInsights?.success) {
+                       message += `✅ Insights de Posts: FUNCIONA\n`;
+                       message += `   Métricas: ${data.testResults.postInsights.metrics.join(', ')}\n`;
+                     } else {
+                       message += `❌ Insights de Posts: FALLA\n`;
+                     }
+                     
+                     if (data.testResults.postReactions?.success) {
+                       message += `✅ Reacciones: FUNCIONA\n`;
+                       message += `   Reacciones: ${data.testResults.postReactions.reactionsCount}, Likes: ${data.testResults.postReactions.likesCount}\n`;
+                     } else {
+                       message += `❌ Reacciones: FALLA\n`;
+                     }
+                     
+                     message += `\n📚 Documentación: ${data.documentation.source}\n`;
+                     
+                     alert(message);
+                   } else {
+                     const error = await response.json();
+                     alert(`❌ Error en test oficial: ${error.error}`);
+                   }
+                 } catch (error) {
+                   console.error('Error en test oficial:', error);
+                   alert('Error en test oficial. Revisa la consola.');
+                 }
+               }}
+               className="px-4 py-2 bg-teal-600 text-white rounded-md hover:bg-teal-700 text-sm w-full"
+             >
+               🔍 Test Oficial de Facebook API
+             </button>
+             
+             <button
+               onClick={async () => {
+                 try {
                    // Confirmar antes de resetear
                    const confirmReset = confirm(
                      '⚠️ ¿Estás seguro de que quieres resetear el canal de Facebook?\n\n' +
@@ -614,6 +787,22 @@ export function FacebookAnalytics({ organizationId, days = 30 }: FacebookAnalyti
              <p className="text-xs text-yellow-700 text-center">
                Primero verifica el token, luego prueba la API
              </p>
+             
+             <div className="pt-4 border-t border-yellow-200">
+               <h4 className="font-medium text-yellow-800 mb-2">🔄 Prueba Rápida:</h4>
+               <button
+                 onClick={() => {
+                   // Refrescar la página para probar los cambios
+                   window.location.reload();
+                 }}
+                 className="px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 text-sm w-full"
+               >
+               🔄 Refrescar y Probar Cambios
+               </button>
+               <p className="text-xs text-yellow-700 mt-2 text-center">
+               Haz clic para refrescar y probar si ahora se obtienen las reacciones
+               </p>
+             </div>
            </div>
          </div>
        </div>

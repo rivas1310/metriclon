@@ -91,6 +91,14 @@ const PLATFORMS: PlatformConfig[] = [
     description: 'Crea y comparte contenido de video',
     features: ['Videos', 'Shorts', 'Live streaming', 'Playlists', 'Analytics'],
     isAvailable: true
+  },
+  {
+    name: 'TikTok',
+    icon: <div className="h-6 w-6 bg-black rounded flex items-center justify-center"><span className="text-white text-sm font-bold">T</span></div>,
+    color: 'from-black to-gray-800',
+    description: 'Crea y comparte videos cortos virales',
+    features: ['Videos cortos', 'Tendencias', 'Duets', 'Stitches', 'Analytics de engagement'],
+    isAvailable: true
   }
 ];
 
@@ -201,6 +209,7 @@ export function ChannelsManager({ organizationId }: ChannelsManagerProps) {
       case 'linkedin': return <Linkedin className="h-5 w-5" />;
       case 'twitter': return <Twitter className="h-5 w-5" />;
       case 'youtube': return <Youtube className="h-5 w-5" />;
+      case 'tiktok': return <div className="h-5 w-5 bg-black rounded flex items-center justify-center"><span className="text-white text-xs font-bold">T</span></div>;
       default: return <Link className="h-5 w-5" />;
     }
   };
@@ -212,6 +221,7 @@ export function ChannelsManager({ organizationId }: ChannelsManagerProps) {
       case 'linkedin': return 'from-blue-600 to-blue-700';
       case 'twitter': return 'from-blue-400 to-blue-500';
       case 'youtube': return 'from-red-500 to-red-600';
+      case 'tiktok': return 'from-black to-gray-800';
       default: return 'from-gray-500 to-gray-600';
     }
   };

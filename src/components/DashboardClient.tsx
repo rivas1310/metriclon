@@ -8,6 +8,8 @@ import { CreatePostModal } from '@/components/CreatePostModal';
 import { Analytics } from '@/components/Analytics';
 import { ChannelsManager } from '@/components/ChannelsManager';
 import { NotificationsManager } from '@/components/NotificationsManager';
+// import { TikTokConnect } from '@/components/TikTokConnect';
+// import { TikTokSimple } from '@/components/TikTokSimple';
 import { 
   BarChart3, 
   Calendar as CalendarIcon, 
@@ -160,6 +162,7 @@ export function DashboardClient() {
       case 'linkedin': return <Linkedin className="h-4 w-4" />;
       case 'twitter': return <Twitter className="h-4 w-4" />;
       case 'youtube': return <Youtube className="h-4 w-4" />;
+      case 'tiktok': return <div className="h-4 w-4 bg-black rounded flex items-center justify-center"><span className="text-white text-xs font-bold">T</span></div>;
       default: return <MessageSquare className="h-4 w-4" />;
     }
   };
@@ -171,6 +174,7 @@ export function DashboardClient() {
       case 'linkedin': return 'from-blue-600 to-blue-700';
       case 'twitter': return 'from-blue-400 to-blue-500';
       case 'youtube': return 'from-red-500 to-red-600';
+      case 'tiktok': return 'from-black to-gray-800';
       default: return 'from-gray-500 to-gray-600';
     }
   };
@@ -453,6 +457,54 @@ export function DashboardClient() {
                       No hay canales configurados aún
                     </div>
                   )}
+                  
+                  {/* Card de TikTok para conectar - Temporalmente comentada */}
+                  {/* {!channelsData?.find((c: Channel) => c.platform === 'TIKTOK') && (
+                    <div className="p-4 rounded-lg border-2 border-gray-200 bg-gray-50">
+                      <div className="flex items-center space-x-3">
+                        <div className="p-2 rounded-lg bg-gradient-to-r from-black to-gray-800">
+                          <div className="h-4 w-4 bg-black rounded flex items-center justify-center">
+                            <span className="text-white text-xs font-bold">T</span>
+                          </div>
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-medium text-gray-900">TikTok</p>
+                          <p className="text-sm text-gray-500">Conectar cuenta</p>
+                        </div>
+                        <div className="w-3 h-3 rounded-full bg-gray-400" />
+                      </div>
+                      <button 
+                        onClick={() => setSelectedTab('channels')}
+                        className="mt-3 w-full px-3 py-2 text-sm font-medium text-blue-600 border border-blue-300 rounded-md hover:bg-blue-50 transition-colors"
+                      >
+                        Conectar TikTok
+                      </button>
+                    </div>
+                  )} */}
+                  
+                  {/* Card de TikTok para conectar */}
+                  {!channelsData?.find((c: Channel) => c.platform === 'TIKTOK') && (
+                    <div className="p-4 rounded-lg border-2 border-gray-200 bg-gray-50">
+                      <div className="flex items-center space-x-3">
+                        <div className="p-2 rounded-lg bg-gradient-to-r from-black to-gray-800">
+                          <div className="h-4 w-4 bg-black rounded-full flex items-center justify-center">
+                            <span className="text-white text-xs font-bold">T</span>
+                          </div>
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-medium text-gray-900">TikTok</p>
+                          <p className="text-sm text-gray-500">Conectar cuenta</p>
+                        </div>
+                        <div className="w-3 h-3 rounded-full bg-gray-400" />
+                      </div>
+                      <button 
+                        onClick={() => setSelectedTab('channels')}
+                        className="mt-3 w-full px-3 py-2 text-sm font-medium text-blue-600 border border-blue-300 rounded-md hover:bg-blue-50 transition-colors"
+                      >
+                        Conectar TikTok
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -532,11 +584,89 @@ export function DashboardClient() {
         )}
 
         {selectedTab === 'channels' && (
-          <ChannelsManager organizationId={selectedOrganization || ''} />
+          <div className="space-y-8">
+            <ChannelsManager organizationId={selectedOrganization || ''} />
+            
+            {/* Sección específica de TikTok */}
+            <div className="bg-white rounded-lg shadow">
+              <div className="px-6 py-4 border-b border-gray-200">
+                <h3 className="text-lg font-medium text-gray-900">🎵 Conectar TikTok</h3>
+                <p className="text-sm text-gray-500 mt-1">Vincula tu cuenta de TikTok para analizar métricas y gestionar contenido</p>
+              </div>
+              <div className="p-6">
+                <div className="text-center py-8 text-gray-500 mb-6">
+                  <div className="w-16 h-16 bg-black rounded-full flex items-center justify-center mx-auto mb-4">
+                    <span className="text-white text-2xl font-bold">T</span>
+                  </div>
+                  <p className="text-lg font-medium text-gray-900 mb-2">Conecta TikTok</p>
+                  <p className="text-gray-500">Vincula tu cuenta para acceder a métricas</p>
+                </div>
+                
+                <button
+                  onClick={() => {
+                    // Función para conectar TikTok
+                    window.open('/api/oauth/tiktok', '_blank');
+                  }}
+                  className="w-full px-6 py-3 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors"
+                >
+                  Conectar TikTok
+                </button>
+                
+                <div className="mt-4 p-4 bg-blue-50 rounded-lg">
+                  <h4 className="text-sm font-medium text-blue-900 mb-2">¿Qué puedes hacer con TikTok?</h4>
+                  <ul className="text-sm text-blue-700 space-y-1">
+                    <li>• Ver métricas de seguidores y engagement</li>
+                    <li>• Analizar rendimiento de videos</li>
+                    <li>• Gestionar contenido desde un panel centralizado</li>
+                    <li>• Publicar videos directamente desde Metriclon</li>
+                    <li>• Obtener insights detallados de audiencia</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
         )}
 
         {selectedTab === 'analytics' && (
-          <Analytics organizationId={selectedOrganization || ''} />
+          <div className="space-y-8">
+            <Analytics organizationId={selectedOrganization || ''} />
+            
+            {/* TikTok Inline - Componente directo */}
+            <div className="bg-white rounded-lg shadow">
+              <div className="px-6 py-4 border-b border-gray-200">
+                <h3 className="text-lg font-medium text-gray-900">🎵 TikTok</h3>
+                <p className="text-sm text-gray-500 mt-1">Conecta tu cuenta de TikTok</p>
+              </div>
+              <div className="p-6">
+                <div className="text-center py-8 text-gray-500 mb-6">
+                  <div className="w-16 h-16 bg-black rounded-full flex items-center justify-center mx-auto mb-4">
+                    <span className="text-white text-2xl font-bold">T</span>
+                  </div>
+                  <p className="text-lg font-medium text-gray-900 mb-2">Conecta TikTok</p>
+                  <p className="text-gray-500">Vincula tu cuenta para acceder a métricas</p>
+                </div>
+                
+                <button
+                  onClick={() => {
+                    // Función simple para conectar TikTok
+                    window.open('/api/oauth/tiktok', '_blank');
+                  }}
+                  className="w-full px-6 py-3 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors"
+                >
+                  Conectar TikTok
+                </button>
+                
+                <div className="mt-4 p-4 bg-blue-50 rounded-lg">
+                  <h4 className="text-sm font-medium text-blue-900 mb-2">¿Qué puedes hacer?</h4>
+                  <ul className="text-sm text-blue-700 space-y-1">
+                    <li>• Ver métricas de seguidores y engagement</li>
+                    <li>• Analizar rendimiento de videos</li>
+                    <li>• Gestionar contenido desde un panel centralizado</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
         )}
 
         {selectedTab === 'notifications' && (

@@ -284,25 +284,28 @@ export async function getFacebookAnalytics(
                return acc;
              }, {});
 
-             // Debug: Log de insights del post
+                          // Debug: Log de insights del post
              console.log(`🔍 Post ${post.id} insights:`, insights);
              console.log(`🔍 Post ${post.id} insightsMap:`, insightsMap);
 
              // Intentar obtener reacciones de diferentes maneras
              let reactions = {};
              
-             // Método 1: Desde insights
+             // Método 1: Desde insights - post_reactions_by_type_total
              if (insightsMap.post_reactions_by_type_total) {
+               console.log(`🔍 Post ${post.id} post_reactions_by_type_total:`, insightsMap.post_reactions_by_type_total);
                reactions = insightsMap.post_reactions_by_type_total;
              }
              
              // Método 2: Intentar obtener reacciones directamente del post
              if (post.reactions) {
+               console.log(`🔍 Post ${post.id} post.reactions:`, post.reactions);
                reactions = { ...reactions, ...post.reactions };
              }
              
              // Método 3: Intentar obtener reacciones por separado
              if (post.likes) {
+               console.log(`🔍 Post ${post.id} post.likes:`, post.likes);
                reactions = { ...reactions, like: post.likes };
              }
 
