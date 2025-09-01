@@ -136,6 +136,14 @@ export function ChannelsManager({ organizationId }: ChannelsManagerProps) {
   // Mutación para conectar canal
   const connectChannelMutation = useMutation({
     mutationFn: async (platform: string) => {
+      // Para TikTok, usar el endpoint específico
+      if (platform.toLowerCase() === 'tiktok') {
+        const response = await fetch('/api/oauth/tiktok');
+        if (!response.ok) throw new Error('Error al conectar TikTok');
+        return response.json();
+      }
+      
+      // Para otras plataformas, usar el endpoint genérico (si existe)
       const response = await fetch('/api/oauth/connect', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

@@ -8,7 +8,7 @@ import { CreatePostModal } from '@/components/CreatePostModal';
 import { Analytics } from '@/components/Analytics';
 import { ChannelsManager } from '@/components/ChannelsManager';
 import { NotificationsManager } from '@/components/NotificationsManager';
-import TikTokConnect from './TikTokConnect';
+
 // import { TikTokSimple } from '@/components/TikTokSimple';
 
 import { 
@@ -587,39 +587,6 @@ export function DashboardClient() {
         {selectedTab === 'channels' && (
           <div className="space-y-8">
             <ChannelsManager organizationId={selectedOrganization || ''} />
-            
-            {/* Sección específica de TikTok */}
-            <div className="bg-white rounded-lg shadow">
-              <div className="px-6 py-4 border-b border-gray-200">
-                <h3 className="text-lg font-medium text-gray-900">🎵 Conectar TikTok</h3>
-                <p className="text-sm text-gray-500 mt-1">Vincula tu cuenta de TikTok para analizar métricas y gestionar contenido</p>
-              </div>
-              <div className="p-6">
-                <div className="text-center py-8 text-gray-500 mb-6">
-                  <div className="w-16 h-16 bg-black rounded-full flex items-center justify-center mx-auto mb-4">
-                    <span className="text-white text-2xl font-bold">T</span>
-                  </div>
-                  <p className="text-lg font-medium text-gray-900 mb-2">Conecta TikTok</p>
-                  <p className="text-gray-500">Vincula tu cuenta para acceder a métricas</p>
-                </div>
-                
-                <TikTokConnect onConnect={() => {
-                  // Recargar la página después de conectar
-                  window.location.reload();
-                }} />
-                
-                <div className="mt-4 p-4 bg-blue-50 rounded-lg">
-                  <h4 className="text-sm font-medium text-blue-900 mb-2">¿Qué puedes hacer con TikTok?</h4>
-                  <ul className="text-sm text-blue-700 space-y-1">
-                    <li>• Ver métricas de seguidores y engagement</li>
-                    <li>• Analizar rendimiento de videos</li>
-                    <li>• Gestionar contenido desde un panel centralizado</li>
-                    <li>• Publicar videos directamente desde Metriclon</li>
-                    <li>• Obtener insights detallados de audiencia</li>
-                  </ul>
-                </div>
-              </div>
-            </div>
           </div>
         )}
 
