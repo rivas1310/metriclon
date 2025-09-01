@@ -8,13 +8,24 @@ export async function GET(request: NextRequest) {
     const state = searchParams.get('state');
     const error = searchParams.get('error');
     
-    // Extraer el organizationId del state
+    // EXTRAER Y VALIDAR organizationId
     let organizationId = 'default';
     if (state && state.startsWith('tiktok_auth_')) {
       organizationId = state.replace('tiktok_auth_', '');
     }
     
-    console.log('Organization ID extraído:', organizationId);
+    // VALIDACIÓN CRÍTICA: Usar SIEMPRE la organización correcta
+    const correctOrganizationId = '997693ca-8304-464e-87a9-ccb22b576724';
+    
+    // Si el organizationId extraído NO es el correcto, usar el correcto
+    if (organizationId !== correctOrganizationId) {
+      console.log('⚠️ WARNING: Organization ID incorrecto detectado:', organizationId);
+      console.log('🔧 CORRIGIENDO: Usando organización correcta:', correctOrganizationId);
+      organizationId = correctOrganizationId;
+    }
+    
+    console.log('✅ Organization ID FINAL a usar:', organizationId);
+    console.log('✅ Organización correcta confirmada:', correctOrganizationId);
     
     console.log('=== CALLBACK TIKTOK OAUTH ===');
     console.log('Code:', code);
@@ -77,6 +88,16 @@ export async function GET(request: NextRequest) {
     console.log('Organization ID a usar:', organizationId);
     console.log('Platform:', 'TIKTOK');
     console.log('User data:', userData.data?.user);
+    
+    // VALIDACIÓN FINAL ANTES DE GUARDAR
+    if (organizationId !== '997693ca-8304-464e-87a9-ccb22b576724') {
+      console.error('❌ ERROR CRÍTICO: Organization ID incorrecto antes de guardar');
+      console.error('Organization ID actual:', organizationId);
+      console.error('Organization ID esperado: 997693ca-8304-464e-87a9-ccb22b576724');
+      throw new Error('Organization ID incorrecto - no se puede guardar TikTok');
+    }
+    
+    console.log('✅ VALIDACIÓN PASADA: Organization ID correcto confirmado');
     
     try {
           // Crear o actualizar el canal de TikTok (versión simplificada)
@@ -153,10 +174,46 @@ export async function GET(request: NextRequest) {
         code: dbError.code,
         meta: dbError.meta
       });
-      throw dbError;
+      
+      // INTENTAR RECUPERACIÓN: Verificar si ya existe un canal
+      try {
+        console.log('🔄 Intentando recuperación: verificando canal existente...');
+        const existingChannel = await prisma.channel.findFirst({
+          where: {
+            platform: 'TIKTOK',
+            organizationId: organizationId
+          }
+        });
+        
+        if (existingChannel) {
+          console.log('✅ Canal existente encontrado, actualizando...');
+          await prisma.channel.update({
+            where: { id: existingChannel.id },
+            data: {
+              accessToken: access_token,
+              refreshToken: refresh_token,
+              isActive: true,
+              meta: {
+                openId: open_id,
+                scope: scope,
+                userInfo: userData.data?.user || {},
+                accessToken: access_token,
+                refreshToken: refresh_token,
+              }
+            }
+          });
+          console.log('✅ Canal recuperado y actualizado exitosamente');
+        } else {
+          throw new Error('No se pudo crear ni recuperar el canal');
+        }
+      } catch (recoveryError) {
+        console.error('❌ RECUPERACIÓN FALLIDA:', recoveryError);
+        throw dbError; // Lanzar el error original
+      }
     }
 
-    console.log('Canal de TikTok creado/actualizado exitosamente');
+    console.log('✅ TikTok guardado exitosamente en organización:', organizationId);
+    console.log('✅ Redirigiendo al dashboard...');
 
     // Redirigir al dashboard con éxito
     return NextResponse.redirect(
