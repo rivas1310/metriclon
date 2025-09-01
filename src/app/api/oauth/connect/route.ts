@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
       tiktok: {
         clientId: process.env.TIKTOK_CLIENT_ID,
         redirectUri: process.env.TIKTOK_REDIRECT_URI || `${process.env.NEXT_PUBLIC_APP_URL}/api/oauth/callback/tiktok`,
-        scope: 'user.info.basic,video.upload',
+        scope: 'user.info.basic,video.upload,video.publish',
         authUrl: 'https://www.tiktok.com/v2/auth/authorize/',
       }
     };
