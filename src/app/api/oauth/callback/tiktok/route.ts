@@ -79,27 +79,20 @@ export async function GET(request: NextRequest) {
     console.log('User data:', userData.data?.user);
     
     try {
-      // Crear o actualizar el canal de TikTok
-      const channel = await prisma.channel.upsert({
-        where: {
-          platform_organizationId: {
-            platform: 'TIKTOK',
-            organizationId: organizationId,
-          },
-        },
-        update: {
-          accessToken: access_token,
-          refreshToken: refresh_token,
-          isActive: true,
-          meta: {
-            openId: open_id,
-            scope: scope,
-            userInfo: userData.data?.user || {},
-            accessToken: access_token,
-            refreshToken: refresh_token,
-          },
-        },
-        create: {
+          // Crear o actualizar el canal de TikTok (versión simplificada)
+    console.log('=== CREANDO CANAL DE TIKTOK ===');
+    console.log('Datos a guardar:', {
+      platform: 'TIKTOK',
+      name: userData.data?.user?.display_name || 'TikTok Account',
+      organizationId: organizationId,
+      isActive: true
+    });
+    
+    let channel;
+    try {
+      // Intentar crear el canal directamente
+      channel = await prisma.channel.create({
+        data: {
           platform: 'TIKTOK',
           name: userData.data?.user?.display_name || 'TikTok Account',
           accessToken: access_token,
@@ -116,7 +109,41 @@ export async function GET(request: NextRequest) {
         },
       });
       
-      console.log('✅ Canal de TikTok creado/actualizado exitosamente:', channel.id);
+      console.log('✅ Canal de TikTok creado exitosamente:', channel.id);
+      
+    } catch (createError) {
+      console.log('Error al crear, intentando actualizar:', createError.message);
+      
+      // Si falla la creación, intentar actualizar
+      try {
+        channel = await prisma.channel.updateMany({
+          where: {
+            platform: 'TIKTOK',
+            organizationId: organizationId,
+          },
+          data: {
+            accessToken: access_token,
+            refreshToken: refresh_token,
+            isActive: true,
+            meta: {
+              openId: open_id,
+              scope: scope,
+              userInfo: userData.data?.user || {},
+              accessToken: access_token,
+              refreshToken: refresh_token,
+            },
+          },
+        });
+        
+        console.log('✅ Canal de TikTok actualizado exitosamente');
+        
+      } catch (updateError) {
+        console.error('❌ ERROR CRÍTICO:', updateError);
+        throw updateError;
+      }
+    }
+      
+              console.log('✅ Canal de TikTok creado/actualizado exitosamente');
       console.log('Canal completo:', channel);
       
     } catch (dbError) {
@@ -129,7 +156,7 @@ export async function GET(request: NextRequest) {
       throw dbError;
     }
 
-    console.log('Canal de TikTok creado/actualizado:', channel.id);
+    console.log('Canal de TikTok creado/actualizado exitosamente');
 
     // Redirigir al dashboard con éxito
     return NextResponse.redirect(
