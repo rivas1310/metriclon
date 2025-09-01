@@ -389,14 +389,14 @@ export function CreatePostModal({ isOpen, onClose, organizationId, channels, onP
                                 <p className="text-sm text-gray-600">
                  Haz clic para subir imágenes o arrastra y suelta
                </p>
-               <p className="text-xs text-gray-500 mt-1">
-                 PNG, JPG, WebP, MP4, AVI, MOV hasta 10MB
-                 {formData.platforms.includes('TIKTOK') && (
-                   <span className="block text-blue-600 font-medium">
-                     🎵 TikTok: Solo videos (MP4, MOV, AVI)
-                   </span>
-                 )}
-               </p>
+                               <p className="text-xs text-gray-500 mt-1">
+                  PNG, JPG, WebP, MP4, AVI, MOV hasta 20MB
+                  {formData.platforms.includes('TIKTOK') && (
+                    <span className="block text-blue-600 font-medium">
+                      🎵 TikTok: Solo videos (MP4, MOV, AVI) hasta 20MB
+                    </span>
+                  )}
+                </p>
                  {formData.platforms.includes('INSTAGRAM') && (
                    <p className="text-xs text-red-500 mt-1 font-medium">
                      ⚠️ Instagram requiere una imagen o video

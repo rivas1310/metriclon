@@ -18,6 +18,13 @@ const nextConfig = {
   experimental: {
     // Permite importaciones más flexibles
     esmExternals: 'loose',
+  },
+  // Configuración para archivos grandes
+  api: {
+    bodyParser: {
+      sizeLimit: '20mb',
+    },
+    responseLimit: '20mb',
   }
 };
 
