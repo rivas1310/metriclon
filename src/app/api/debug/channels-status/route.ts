@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
         id: true,
         platform: true,
         name: true,
-        isConnected: true,
+        isActive: true,
         accessToken: true,
         createdAt: true,
         updatedAt: true
@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
       channels: channels,
       tiktokChannel: tiktokChannel,
       hasTikTok: !!tiktokChannel,
-      tiktokConnected: tiktokChannel?.isConnected || false,
+      tiktokConnected: tiktokChannel?.isActive || false,
       message: 'Estado de canales obtenido correctamente'
     });
 

@@ -41,7 +41,13 @@ export async function GET(
       orderBy: { createdAt: 'desc' },
     });
 
-    return NextResponse.json(channels);
+    // Transformar los datos para incluir isConnected (basado en isActive)
+    const transformedChannels = channels.map(channel => ({
+      ...channel,
+      isConnected: channel.isActive, // Mapear isActive a isConnected para compatibilidad
+    }));
+
+    return NextResponse.json(transformedChannels);
 
   } catch (error) {
     console.error('Error obteniendo canales:', error);

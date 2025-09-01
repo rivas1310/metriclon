@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
       where: {
         organizationId,
         platform: 'TIKTOK',
-        isConnected: true
+        isActive: true
       }
     });
 

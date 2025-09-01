@@ -208,6 +208,7 @@ export interface Channel {
   platform: string;
   name: string;
   isActive: boolean;
+  isConnected: boolean; // Agregar para compatibilidad con componentes
   lastSync?: string;
   followers?: number;
   status: 'connected' | 'disconnected' | 'expired' | 'error';

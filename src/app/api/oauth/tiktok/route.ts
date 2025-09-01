@@ -21,8 +21,14 @@ export async function GET(request: NextRequest) {
     
     console.log('=== INICIANDO OAUTH TIKTOK ===');
     console.log('Client ID:', clientId);
+    console.log('Client ID Type:', typeof clientId);
+    console.log('Client ID Length:', clientId?.length);
     console.log('Redirect URI:', redirectUri);
     console.log('Auth URL:', authUrl.toString());
+    console.log('Environment Variables:');
+    console.log('- TIKTOK_CLIENT_ID:', process.env.TIKTOK_CLIENT_ID);
+    console.log('- TIKTOK_CLIENT_SECRET:', process.env.TIKTOK_CLIENT_SECRET ? 'SET' : 'NOT SET');
+    console.log('- TIKTOK_REDIRECT_URI:', process.env.TIKTOK_REDIRECT_URI);
 
     return NextResponse.json({ 
       authUrl: authUrl.toString(),
