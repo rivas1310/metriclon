@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
     // Generar URL de autorización
     const authUrl = new URL('https://www.tiktok.com/v2/auth/authorize/');
     authUrl.searchParams.append('client_key', clientId);
-               authUrl.searchParams.append('scope', 'user.info.basic,video.upload,video.publish');
+               // authUrl.searchParams.append('scope', 'user.info.basic');
     authUrl.searchParams.append('response_type', 'code');
     authUrl.searchParams.append('redirect_uri', redirectUri);
     authUrl.searchParams.append('state', 'tiktok_auth');
