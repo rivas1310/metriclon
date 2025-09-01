@@ -10,7 +10,7 @@ import { ChannelsManager } from '@/components/ChannelsManager';
 import { NotificationsManager } from '@/components/NotificationsManager';
 // import { TikTokConnect } from '@/components/TikTokConnect';
 // import { TikTokSimple } from '@/components/TikTokSimple';
-import TikTokVideoUpload from './TikTokVideoUpload';
+
 import { 
   BarChart3, 
   Calendar as CalendarIcon, 
@@ -655,55 +655,37 @@ export function DashboardClient() {
               </button>
             </div>
             
-            {/* TikTok Video Upload - Solo mostrar si está conectado */}
-            {(() => {
-              const tiktokChannel = channelsData?.find((c: Channel) => c.platform === 'TIKTOK' && c.isConnected);
-              console.log('TikTok Channel encontrado:', tiktokChannel);
-              console.log('Channels Data:', channelsData);
-              console.log('Selected Organization:', selectedOrganization);
-              
-              return tiktokChannel ? (
-                <TikTokVideoUpload 
-                  organizationId={selectedOrganization || ''} 
-                  onVideoUploaded={(result) => {
-                    console.log('Video subido:', result);
-                    // Aquí puedes agregar lógica adicional después de subir el video
-                  }}
-                />
-              ) : (
-                /* TikTok Inline - Componente directo */
-                <div className="bg-white rounded-lg shadow">
-                  <div className="px-6 py-4 border-b border-gray-200">
-                    <h3 className="text-lg font-medium text-gray-900">🎵 TikTok</h3>
-                    <p className="text-sm text-gray-500 mt-1">Conecta tu cuenta de TikTok</p>
+            {/* TikTok - SOLO UN BOTÓN */}
+            <div className="bg-white rounded-lg shadow">
+              <div className="px-6 py-4 border-b border-gray-200">
+                <h3 className="text-lg font-medium text-gray-900">🎵 TikTok</h3>
+                <p className="text-sm text-gray-500 mt-1">Conecta tu cuenta de TikTok</p>
+              </div>
+              <div className="p-6">
+                <div className="text-center py-8 text-gray-500 mb-6">
+                  <div className="w-16 h-16 bg-black rounded-full flex items-center justify-center mx-auto mb-4">
+                    <span className="text-white text-2xl font-bold">T</span>
                   </div>
-                  <div className="p-6">
-                    <div className="text-center py-8 text-gray-500 mb-6">
-                      <div className="w-16 h-16 bg-black rounded-full flex items-center justify-center mx-auto mb-4">
-                        <span className="text-white text-2xl font-bold">T</span>
-                      </div>
-                      <p className="text-lg font-medium text-gray-900 mb-2">Conecta TikTok</p>
-                      <p className="text-gray-500">Vincula tu cuenta para acceder a métricas</p>
-                    </div>
-                    
-                            <TikTokConnect onConnect={() => {
-          // Recargar la página después de conectar
-          window.location.reload();
-        }} />
-                    
-                    <div className="mt-4 p-4 bg-blue-50 rounded-lg">
-                      <h4 className="text-sm font-medium text-blue-900 mb-2">¿Qué puedes hacer?</h4>
-                      <ul className="text-sm text-blue-700 space-y-1">
-                        <li>• Ver métricas de seguidores y engagement</li>
-                        <li>• Analizar rendimiento de videos</li>
-                        <li>• Gestionar contenido desde un panel centralizado</li>
-                        <li>• Subir y publicar videos directamente</li>
-                      </ul>
-                    </div>
-                  </div>
+                  <p className="text-lg font-medium text-gray-900 mb-2">Conecta TikTok</p>
+                  <p className="text-gray-500">Vincula tu cuenta para acceder a métricas</p>
                 </div>
-              );
-            })()}
+                
+                <TikTokConnect onConnect={() => {
+                  // Recargar la página después de conectar
+                  window.location.reload();
+                }} />
+                
+                <div className="mt-4 p-4 bg-blue-50 rounded-lg">
+                  <h4 className="text-sm font-medium text-blue-900 mb-2">¿Qué puedes hacer?</h4>
+                  <ul className="text-sm text-blue-700 space-y-1">
+                    <li>• Ver métricas de seguidores y engagement</li>
+                    <li>• Analizar rendimiento de videos</li>
+                    <li>• Gestionar contenido desde un panel centralizado</li>
+                    <li>• Subir y publicar videos directamente</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
           </div>
         )}
 
