@@ -686,15 +686,10 @@ export function DashboardClient() {
                       <p className="text-gray-500">Vincula tu cuenta para acceder a métricas</p>
                     </div>
                     
-                    <button
-                                           onClick={() => {
-                       // Función simple para conectar TikTok con organizationId
-                       window.open(`/api/oauth/tiktok?organizationId=${selectedOrganization || ''}`, '_blank');
-                     }}
-                      className="w-full px-6 py-3 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors"
-                    >
-                      Conectar TikTok
-                    </button>
+                            <TikTokConnect onConnect={() => {
+          // Recargar la página después de conectar
+          window.location.reload();
+        }} />
                     
                     <div className="mt-4 p-4 bg-blue-50 rounded-lg">
                       <h4 className="text-sm font-medium text-blue-900 mb-2">¿Qué puedes hacer?</h4>
