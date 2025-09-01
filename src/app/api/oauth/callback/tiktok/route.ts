@@ -71,6 +71,7 @@ export async function GET(request: NextRequest) {
     const channel = await prisma.channel.create({
       data: {
         platform: 'TIKTOK',
+        externalId: open_id, // CAMPO OBLIGATORIO
         name: userData.data?.user?.display_name || 'TikTok Account',
         accessToken: access_token,
         refreshToken: refresh_token,

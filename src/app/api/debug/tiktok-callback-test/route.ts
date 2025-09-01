@@ -22,17 +22,18 @@ export async function GET(request: NextRequest) {
     
     // 3. Intentar crear un canal de prueba
     try {
-      const testChannel = await prisma.channel.create({
-        data: {
-          platform: 'TIKTOK_TEST',
-          name: 'Test TikTok',
-          isActive: true,
-          organizationId: '997693ca-8304-464e-87a9-ccb22b576724',
-          accessToken: 'test_token',
-          refreshToken: 'test_refresh',
-          meta: { test: true }
-        }
-      });
+             const testChannel = await prisma.channel.create({
+         data: {
+           platform: 'TIKTOK_TEST',
+           externalId: 'test_external_id', // CAMPO OBLIGATORIO
+           name: 'Test TikTok',
+           isActive: true,
+           organizationId: '997693ca-8304-464e-87a9-ccb22b576724',
+           accessToken: 'test_token',
+           refreshToken: 'test_refresh',
+           meta: { test: true }
+         }
+       });
       
       console.log('✅ Canal de prueba creado:', testChannel.id);
       
