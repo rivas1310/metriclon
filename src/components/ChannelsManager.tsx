@@ -156,7 +156,11 @@ export function ChannelsManager({ organizationId }: ChannelsManagerProps) {
       console.log('OAuth iniciado:', data);
       // Redirigir al usuario a la URL de autorización
       if (data.authUrl) {
-        window.location.href = data.authUrl;
+        console.log('Redirigiendo a:', data.authUrl);
+        // Usar window.open para abrir en nueva pestaña
+        window.open(data.authUrl, '_blank');
+        // O usar window.location.href para redirigir en la misma pestaña
+        // window.location.href = data.authUrl;
       }
       setShowConnectionModal(false);
     },
