@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyToken } from '@/lib/auth';
+import { getAllPlatformAnalytics, getFacebookAnalytics, getInstagramAnalytics } from '@/lib/socialMediaAPI';
 
 export async function GET(request: NextRequest) {
   try {
@@ -16,8 +17,8 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const organizationId = searchParams.get('organizationId');
-    const startDate = searchParams.get('startDate');
-    const endDate = searchParams.get('endDate');
+    const days = parseInt(searchParams.get('days') || '30');
+    const platform = searchParams.get('platform'); // 'facebook', 'instagram', o null para ambos
 
     if (!organizationId) {
       return NextResponse.json(
@@ -41,56 +42,93 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const where: any = {
-      post: {
-        organizationId,
-      },
+    // Obtener canales conectados de la organización
+    const whereChannels: any = {
+      organizationId,
+      isActive: true,
     };
 
-    if (startDate && endDate) {
-      where.capturedAt = {
-        gte: new Date(startDate),
-        lte: new Date(endDate),
+    if (platform) {
+      whereChannels.platform = platform.toUpperCase();
+    } else {
+      // Solo Facebook e Instagram por ahora
+      whereChannels.platform = {
+        in: ['FACEBOOK', 'INSTAGRAM']
       };
     }
 
-    const metrics = await prisma.postMetric.findMany({
-      where,
-      include: {
-        post: {
-          select: {
-            id: true,
-            caption: true,
-            type: true,
-            channel: {
-              select: {
-                id: true,
-                name: true,
-                platform: true,
-              },
-            },
-          },
-        },
-      },
-      orderBy: { capturedAt: 'desc' },
+    const channels = await prisma.channel.findMany({
+      where: whereChannels,
     });
 
-    // Calcular métricas agregadas
-    const totalImpressions = metrics.reduce((sum, m) => sum + (m.impressions || 0), 0);
-    const totalReach = metrics.reduce((sum, m) => sum + (m.reach || 0), 0);
-    const totalEngagement = metrics.reduce((sum, m) => sum + (m.engagement || 0), 0);
-    const totalPosts = metrics.length;
+    if (channels.length === 0) {
+      return NextResponse.json({
+        data: {
+          platforms: [],
+          summary: {
+            totalFollowers: 0,
+            totalImpressions: 0,
+            totalReach: 0,
+            totalEngagement: 0,
+            engagementRate: 0,
+            postCount: 0,
+          },
+          message: 'No hay canales conectados para obtener métricas'
+        }
+      });
+    }
 
-    const aggregatedMetrics = {
-      totalImpressions,
-      totalReach,
-      totalEngagement,
-      totalPosts,
-      averageEngagement: totalPosts > 0 ? totalEngagement / totalPosts : 0,
-      metrics,
+    // Obtener analytics reales de cada plataforma
+    console.log(`🚀 Obteniendo métricas reales para ${channels.length} canales:`, 
+      channels.map(c => `${c.platform}(${c.id})`));
+    
+    const platformAnalytics = await getAllPlatformAnalytics(channels, days);
+    
+    console.log(`📊 Analytics obtenidos: ${platformAnalytics.length} plataformas`, 
+      platformAnalytics.map(p => p.platform));
+
+    // Calcular métricas agregadas
+    const summary = platformAnalytics.reduce((acc, platform) => {
+      const followers = 'followers_count' in platform.accountInfo 
+        ? platform.accountInfo.followers_count 
+        : ('fan_count' in platform.accountInfo ? platform.accountInfo.fan_count : 0);
+
+      return {
+        totalFollowers: acc.totalFollowers + followers,
+        totalImpressions: acc.totalImpressions + platform.insights.totalImpressions,
+        totalReach: acc.totalReach + platform.insights.totalReach,
+        totalEngagement: acc.totalEngagement + platform.insights.totalEngagement,
+        postCount: acc.postCount + platform.insights.postCount,
+      };
+    }, {
+      totalFollowers: 0,
+      totalImpressions: 0,
+      totalReach: 0,
+      totalEngagement: 0,
+      postCount: 0,
+    });
+
+    const engagementRate = summary.totalFollowers > 0 
+      ? (summary.totalEngagement / summary.totalFollowers) * 100 
+      : 0;
+
+    const responseData = {
+      platforms: platformAnalytics.map(platform => ({
+        platform: platform.platform,
+        accountInfo: platform.accountInfo,
+        insights: platform.insights,
+        recentPosts: platform.recentPosts.slice(0, 10), // Limitar a 10 posts más recientes
+        dateRange: platform.dateRange,
+      })),
+      summary: {
+        ...summary,
+        engagementRate,
+      },
+      generatedAt: new Date().toISOString(),
+      days,
     };
 
-    return NextResponse.json({ data: aggregatedMetrics });
+    return NextResponse.json({ data: responseData });
   } catch (error) {
     console.error('Error obteniendo métricas:', error);
     return NextResponse.json(

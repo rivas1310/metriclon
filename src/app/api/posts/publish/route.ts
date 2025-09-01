@@ -909,6 +909,38 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // Guardar el asset de la imagen si existe
+    if (mediaFile && mediaFile.size > 0) {
+      console.log('=== GUARDANDO ASSET DE IMAGEN ===');
+      
+      try {
+        // Subir imagen a Cloudinary
+        const imageUrl = await convertFileToUrl(mediaFile);
+        console.log('URL de imagen para guardar:', imageUrl);
+        
+        // Crear el asset en la base de datos
+        await prisma.asset.create({
+          data: {
+            postId: post.id,
+            type: 'IMAGE',
+            url: imageUrl,
+            filename: mediaFile.name,
+            size: mediaFile.size,
+            meta: {
+              originalType: mediaFile.type,
+              platform: channel.platform,
+              externalPostId: postId
+            }
+          }
+        });
+        
+        console.log('✅ Asset de imagen guardado exitosamente');
+      } catch (assetError) {
+        console.error('❌ Error guardando asset:', assetError);
+        // No fallar la publicación por error en asset
+      }
+    }
+
     console.log('✅ Post guardado en base de datos:', post.id);
 
     return NextResponse.json({

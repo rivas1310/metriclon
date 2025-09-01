@@ -1,11 +1,9 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   LineChart, 
   Line, 
-  AreaChart, 
-  Area, 
   BarChart, 
   Bar, 
   PieChart, 
@@ -16,171 +14,183 @@ import {
   CartesianGrid, 
   Tooltip, 
   Legend, 
-  ResponsiveContainer,
-  RadarChart,
-  PolarGrid,
-  PolarAngleAxis,
-  PolarRadiusAxis,
-  Radar
+  ResponsiveContainer
 } from 'recharts';
 import { 
   TrendingUp, 
   Users, 
   Eye, 
   Heart, 
-  MessageSquare, 
-  Share2, 
-  Calendar,
   Filter,
   Download,
-  RefreshCw
+  RefreshCw,
+  Camera,
+  AlertCircle,
+  Bug,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
-import { format, subDays, startOfDay, endOfDay } from 'date-fns';
-import { es } from 'date-fns/locale';
+import { FacebookAnalytics } from './FacebookAnalytics';
+import { InstagramAnalytics } from './InstagramAnalytics';
+import { WebhookSetup } from './WebhookSetup';
 
 interface AnalyticsProps {
   organizationId: string;
 }
 
-interface MetricData {
-  date: string;
-  followers: number;
-  reach: number;
-  engagement: number;
-  posts: number;
-}
-
-interface PlatformData {
-  platform: string;
-  followers: number;
-  engagement: number;
-  reach: number;
-  posts: number;
-}
-
-interface PostPerformance {
-  id: string;
-  content: string;
-  platform: string;
-  publishedAt: string;
-  likes: number;
-  comments: number;
-  shares: number;
-  views: number;
+interface SummaryData {
+  totalFollowers: number;
+  totalImpressions: number;
+  totalReach: number;
+  totalEngagement: number;
   engagementRate: number;
+  postCount: number;
 }
 
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D'];
+interface PlatformSummary {
+  platform: 'FACEBOOK' | 'INSTAGRAM';
+  connected: boolean;
+  followers: number;
+  engagement: number;
+  reach: number;
+  posts: number;
+}
+
+const COLORS = ['#3B82F6', '#E91E63', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
 
 export function Analytics({ organizationId }: AnalyticsProps) {
   const [timeRange, setTimeRange] = useState<'7d' | '30d' | '90d'>('30d');
-  const [selectedMetric, setSelectedMetric] = useState<'followers' | 'engagement' | 'reach' | 'posts'>('followers');
+  const [selectedView, setSelectedView] = useState<'overview' | 'facebook' | 'instagram'>('overview');
+  const [summaryData, setSummaryData] = useState<SummaryData | null>(null);
+  const [platformData, setPlatformData] = useState<PlatformSummary[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [showDebug, setShowDebug] = useState(false);
+  const [debugData, setDebugData] = useState<any>(null);
 
-  // Mock data - en producción esto vendría de la API
-  const mockMetricsData: MetricData[] = useMemo(() => {
-    const data: MetricData[] = [];
     const days = timeRange === '7d' ? 7 : timeRange === '30d' ? 30 : 90;
     
-    for (let i = days - 1; i >= 0; i--) {
-      const date = subDays(new Date(), i);
-      data.push({
-        date: format(date, 'MMM dd'),
-        followers: Math.floor(Math.random() * 1000) + 2000,
-        reach: Math.floor(Math.random() * 5000) + 10000,
-        engagement: Math.floor(Math.random() * 500) + 1000,
-        posts: Math.floor(Math.random() * 3) + 1,
+  const fetchAnalyticsData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      console.log(`🔍 Obteniendo analytics para organizationId: ${organizationId}`);
+
+      const response = await fetch(
+        `/api/metrics?organizationId=${organizationId}&days=${days}`
+      );
+
+      console.log(`📊 Response status: ${response.status}`);
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('❌ Error response:', errorData);
+        throw new Error(errorData.error || 'Error al obtener métricas');
+      }
+
+      const result = await response.json();
+      console.log('📈 Analytics result:', result);
+      
+      // Establecer datos de resumen
+      setSummaryData(result.data.summary);
+
+      // Preparar datos de plataformas
+      const platforms: PlatformSummary[] = [
+        {
+          platform: 'FACEBOOK',
+          connected: false,
+          followers: 0,
+          engagement: 0,
+          reach: 0,
+          posts: 0,
+        },
+        {
+          platform: 'INSTAGRAM',
+          connected: false,
+          followers: 0,
+          engagement: 0,
+          reach: 0,
+          posts: 0,
+        }
+      ];
+
+      console.log(`🔗 Platforms encontradas: ${result.data.platforms.length}`);
+
+      result.data.platforms.forEach((platform: any) => {
+        console.log(`📱 Procesando platform: ${platform.platform}`);
+        const platformIndex = platforms.findIndex(p => p.platform === platform.platform);
+        if (platformIndex !== -1) {
+          platforms[platformIndex] = {
+            platform: platform.platform,
+            connected: true,
+            followers: 'followers_count' in platform.accountInfo 
+              ? platform.accountInfo.followers_count 
+              : platform.accountInfo.fan_count || 0,
+            engagement: platform.insights.totalEngagement,
+            reach: platform.insights.totalReach,
+            posts: platform.insights.postCount,
+          };
+        }
       });
-    }
-    return data;
-  }, [timeRange]);
 
-  const mockPlatformData: PlatformData[] = [
-    { platform: 'Instagram', followers: 1250, engagement: 450, reach: 8500, posts: 12 },
-    { platform: 'Facebook', followers: 890, engagement: 320, reach: 6200, posts: 8 },
-    { platform: 'LinkedIn', followers: 450, engagement: 180, reach: 3200, posts: 5 },
-    { platform: 'Twitter', followers: 320, engagement: 120, reach: 2100, posts: 3 },
-    { platform: 'YouTube', followers: 280, engagement: 95, reach: 1800, posts: 2 },
-  ];
+      setPlatformData(platforms);
+      console.log('✅ Analytics data loaded successfully');
 
-  const mockPostPerformance: PostPerformance[] = [
-    {
-      id: '1',
-      content: '¡Hola! Hoy rescatamos a este pequeño gatito...',
-      platform: 'Instagram',
-      publishedAt: '2024-01-15T10:00:00Z',
-      likes: 45,
-      comments: 12,
-      shares: 8,
-      views: 120,
-      engagementRate: 8.2
-    },
-    {
-      id: '2',
-      content: 'Consejos para cuidar a tu gato...',
-      platform: 'Facebook',
-      publishedAt: '2024-01-14T15:30:00Z',
-      likes: 67,
-      comments: 15,
-      shares: 23,
-      views: 340,
-      engagementRate: 12.1
-    },
-    {
-      id: '3',
-      content: 'Nuevo video: Cómo socializar gatitos...',
-      platform: 'YouTube',
-      publishedAt: '2024-01-13T12:00:00Z',
-      likes: 89,
-      comments: 28,
-      shares: 15,
-      views: 1200,
-      engagementRate: 15.3
-    },
-  ];
-
-  const totalFollowers = mockPlatformData.reduce((sum, p) => sum + p.followers, 0);
-  const totalEngagement = mockPlatformData.reduce((sum, p) => sum + p.engagement, 0);
-  const totalReach = mockPlatformData.reduce((sum, p) => sum + p.reach, 0);
-  const totalPosts = mockPlatformData.reduce((sum, p) => sum + p.posts, 0);
-
-  const getMetricIcon = (metric: string) => {
-    switch (metric) {
-      case 'followers': return <Users className="h-5 w-5" />;
-      case 'engagement': return <Heart className="h-5 w-5" />;
-      case 'reach': return <Eye className="h-5 w-5" />;
-      case 'posts': return <Calendar className="h-5 w-5" />;
-      default: return <TrendingUp className="h-5 w-5" />;
+    } catch (err) {
+      console.error('❌ Error fetching analytics:', err);
+      setError(err instanceof Error ? err.message : 'Error desconocido');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const getMetricColor = (metric: string) => {
-    switch (metric) {
-      case 'followers': return 'text-blue-600';
-      case 'engagement': return 'text-purple-600';
-      case 'reach': return 'text-green-600';
-      case 'posts': return 'text-orange-600';
-      default: return 'text-gray-600';
+  const fetchDebugData = async () => {
+    try {
+      const response = await fetch(`/api/debug/channels?organizationId=${organizationId}`);
+      if (response.ok) {
+        const data = await response.json();
+        setDebugData(data);
+      }
+    } catch (error) {
+      console.error('Error fetching debug data:', error);
     }
   };
 
-  const getMetricBgColor = (metric: string) => {
-    switch (metric) {
-      case 'followers': return 'bg-blue-100';
-      case 'engagement': return 'bg-purple-100';
-      case 'reach': return 'bg-green-100';
-      case 'posts': return 'bg-orange-100';
-      default: return 'bg-gray-100';
+  useEffect(() => {
+    fetchAnalyticsData();
+    if (showDebug) {
+      fetchDebugData();
     }
-  };
+  }, [organizationId, days, showDebug]);
+
+  // Renderizar vista específica de plataforma
+  if (selectedView === 'facebook') {
+    return <FacebookAnalytics organizationId={organizationId} days={days} />;
+  }
+
+  if (selectedView === 'instagram') {
+    return <InstagramAnalytics organizationId={organizationId} days={days} />;
+  }
+
+  // Preparar datos para gráficos del overview
+  const chartData = platformData.filter(p => p.connected).map(platform => ({
+    platform: platform.platform === 'FACEBOOK' ? 'Facebook' : 'Instagram',
+    followers: platform.followers,
+    engagement: platform.engagement,
+    reach: platform.reach,
+    posts: platform.posts,
+  }));
 
   return (
     <div className="space-y-8">
-      {/* Header con filtros */}
+      {/* Header con filtros y navegación */}
       <div className="bg-white rounded-lg shadow p-6">
+        <div className="flex flex-col space-y-4">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-4 sm:space-y-0">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">Analytics Detallados</h2>
-            <p className="text-gray-600">Métricas y rendimiento de tus redes sociales</p>
+              <h2 className="text-2xl font-bold text-gray-900">Analytics Reales</h2>
+              <p className="text-gray-600">Métricas en tiempo real de Facebook e Instagram</p>
           </div>
           
           <div className="flex items-center space-x-3">
@@ -197,18 +207,194 @@ export function Analytics({ organizationId }: AnalyticsProps) {
               </select>
             </div>
             
-            <button className="p-2 text-gray-400 hover:text-gray-600 transition-colors">
-              <RefreshCw className="h-4 w-4" />
+              <button 
+                onClick={fetchAnalyticsData}
+                className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+              </button>
+
+              <button 
+                onClick={() => setShowDebug(!showDebug)}
+                className={`p-2 transition-colors ${showDebug ? 'text-orange-600' : 'text-gray-400 hover:text-gray-600'}`}
+                title="Panel de Debug"
+              >
+                <Bug className="h-4 w-4" />
             </button>
             
             <button className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors">
               <Download className="h-4 w-4 mr-2" />
               Exportar
+              </button>
+            </div>
+          </div>
+
+          {/* Navegación entre vistas */}
+          <div className="flex space-x-1 bg-gray-100 rounded-lg p-1">
+            <button
+              onClick={() => setSelectedView('overview')}
+              className={`flex items-center space-x-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                selectedView === 'overview'
+                  ? 'bg-white text-gray-900 shadow'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              <TrendingUp className="h-4 w-4" />
+              <span>Overview</span>
+            </button>
+            <button
+              onClick={() => setSelectedView('facebook')}
+              className={`flex items-center space-x-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                selectedView === 'facebook'
+                  ? 'bg-white text-gray-900 shadow'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              <Users className="h-4 w-4 text-blue-600" />
+              <span>Facebook</span>
+            </button>
+            <button
+              onClick={() => setSelectedView('instagram')}
+              className={`flex items-center space-x-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                selectedView === 'instagram'
+                  ? 'bg-white text-gray-900 shadow'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              <Camera className="h-4 w-4 text-pink-600" />
+              <span>Instagram</span>
             </button>
           </div>
         </div>
       </div>
 
+      {/* Panel de Debug */}
+      {showDebug && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-medium text-yellow-800 flex items-center">
+              <Bug className="h-5 w-5 mr-2" />
+              Panel de Debug
+            </h3>
+            <button
+              onClick={() => setShowDebug(false)}
+              className="text-yellow-600 hover:text-yellow-800"
+            >
+              <ChevronUp className="h-5 w-5" />
+            </button>
+          </div>
+          
+          <div className="space-y-4">
+            <div>
+              <h4 className="font-medium text-yellow-800 mb-2">Información General:</h4>
+              <div className="bg-white rounded p-3 text-sm">
+                <p><strong>Organization ID:</strong> {organizationId}</p>
+                <p><strong>Período:</strong> {days} días</p>
+                <p><strong>Loading:</strong> {loading ? 'Sí' : 'No'}</p>
+                <p><strong>Error:</strong> {error || 'Ninguno'}</p>
+              </div>
+            </div>
+
+            {debugData && (
+              <div>
+                <h4 className="font-medium text-yellow-800 mb-2">Canales Conectados:</h4>
+                <div className="bg-white rounded p-3 text-sm">
+                  <p><strong>Total de canales:</strong> {debugData.totalChannels}</p>
+                  <p><strong>Canales activos:</strong> {debugData.activeChannels}</p>
+                  <p><strong>Plataformas activas:</strong> {debugData.activeChannelPlatforms?.join(', ') || 'Ninguna'}</p>
+                  
+                  {debugData.channels.length > 0 && (
+                    <div className="mt-3">
+                      <h5 className="font-medium mb-2">Detalles de canales:</h5>
+                      <div className="space-y-2">
+                        {debugData.channels.map((channel: any) => (
+                          <div key={channel.id} className="border border-gray-200 rounded p-2">
+                            <p><strong>{channel.platform}:</strong> {channel.name}</p>
+                            <p><strong>Activo:</strong> {channel.isActive ? '✅' : '❌'}</p>
+                            <p><strong>Token:</strong> {channel.hasAccessToken ? '✅' : '❌'}</p>
+                            <p><strong>Token expirado:</strong> {typeof channel.tokenExpired === 'boolean' ? (channel.tokenExpired ? '❌' : '✅') : channel.tokenExpired}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={fetchDebugData}
+                className="px-3 py-1 bg-yellow-200 text-yellow-800 rounded text-sm hover:bg-yellow-300"
+              >
+                Actualizar Debug
+              </button>
+              <button
+                onClick={() => window.open(`/api/debug/channels?organizationId=${organizationId}`, '_blank')}
+                className="px-3 py-1 bg-blue-200 text-blue-800 rounded text-sm hover:bg-blue-300"
+              >
+                Ver JSON Canales
+              </button>
+              <button
+                onClick={() => window.open(`/api/debug/api-test?organizationId=${organizationId}&platform=facebook`, '_blank')}
+                className="px-3 py-1 bg-blue-200 text-blue-800 rounded text-sm hover:bg-blue-300"
+              >
+                Test Facebook API
+              </button>
+              <button
+                onClick={() => window.open(`/api/debug/api-test?organizationId=${organizationId}&platform=instagram`, '_blank')}
+                className="px-3 py-1 bg-pink-200 text-pink-800 rounded text-sm hover:bg-pink-300"
+              >
+                Test Instagram API
+              </button>
+                               <button
+                   onClick={() => window.open(`/api/debug/facebook-personal?organizationId=${organizationId}`, '_blank')}
+                   className="px-3 py-1 bg-blue-300 text-blue-900 rounded text-sm hover:bg-blue-400"
+                 >
+                   Test Facebook Personal
+                 </button>
+               </div>
+             </div>
+
+             {/* Configuración de Webhook */}
+             {debugData?.channels?.find(c => c.platform === 'FACEBOOK') && (
+               <div className="mt-6">
+                 <h4 className="text-lg font-medium text-gray-900 mb-4">🔗 Configuración de Webhook</h4>
+                 <WebhookSetup
+                   organizationId={organizationId}
+                   channelId={debugData.channels.find(c => c.platform === 'FACEBOOK')?.id || ''}
+                   channelName={debugData.channels.find(c => c.platform === 'FACEBOOK')?.name || 'Facebook'}
+                   platform="FACEBOOK"
+                 />
+               </div>
+             )}
+           </div>
+         )}
+
+      {loading ? (
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <RefreshCw className="h-8 w-8 animate-spin text-blue-600 mx-auto mb-4" />
+            <p className="text-gray-600">Cargando métricas...</p>
+          </div>
+        </div>
+      ) : error ? (
+        <div className="text-center py-8">
+          <div className="text-red-500 mb-4">
+            <AlertCircle className="h-12 w-12 mx-auto" />
+          </div>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Error al cargar datos</h3>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <button
+            onClick={fetchAnalyticsData}
+            className="inline-flex items-center px-4 py-2 border border-blue-300 rounded-md text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 transition-colors"
+          >
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Reintentar
+          </button>
+        </div>
+      ) : (
+        <>
       {/* Métricas principales */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <div className="bg-white rounded-lg shadow p-6">
@@ -218,12 +404,10 @@ export function Analytics({ organizationId }: AnalyticsProps) {
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Total Seguidores</p>
-              <p className="text-2xl font-bold text-gray-900">{totalFollowers.toLocaleString()}</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {summaryData?.totalFollowers.toLocaleString() || 0}
+                  </p>
             </div>
-          </div>
-          <div className="mt-4">
-            <span className="text-green-600 text-sm font-medium">+12%</span>
-            <span className="text-gray-500 text-sm ml-1">vs período anterior</span>
           </div>
         </div>
 
@@ -234,12 +418,10 @@ export function Analytics({ organizationId }: AnalyticsProps) {
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Total Engagement</p>
-              <p className="text-2xl font-bold text-gray-900">{totalEngagement.toLocaleString()}</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {summaryData?.totalEngagement.toLocaleString() || 0}
+                  </p>
             </div>
-          </div>
-          <div className="mt-4">
-            <span className="text-green-600 text-sm font-medium">+8%</span>
-            <span className="text-gray-500 text-sm ml-1">vs período anterior</span>
           </div>
         </div>
 
@@ -250,240 +432,140 @@ export function Analytics({ organizationId }: AnalyticsProps) {
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Alcance Total</p>
-              <p className="text-2xl font-bold text-gray-900">{totalReach.toLocaleString()}</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {summaryData?.totalReach.toLocaleString() || 0}
+                  </p>
             </div>
-          </div>
-          <div className="mt-4">
-            <span className="text-green-600 text-sm font-medium">+15%</span>
-            <span className="text-gray-500 text-sm ml-1">vs período anterior</span>
           </div>
         </div>
 
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center">
             <div className="p-2 bg-orange-100 rounded-lg">
-              <Calendar className="h-6 w-6 text-orange-600" />
+                  <TrendingUp className="h-6 w-6 text-orange-600" />
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Posts Publicados</p>
-              <p className="text-2xl font-bold text-gray-900">{totalPosts}</p>
+                  <p className="text-sm font-medium text-gray-600">Tasa de Engagement</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {summaryData?.engagementRate.toFixed(2) || 0}%
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
-          <div className="mt-4">
-            <span className="text-green-600 text-sm font-medium">+5%</span>
-            <span className="text-gray-500 text-sm ml-1">vs período anterior</span>
+
+          {/* Estado de plataformas */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {platformData.map((platform) => (
+              <div key={platform.platform} className="bg-white rounded-lg shadow p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center space-x-3">
+                    <div className={`p-2 rounded-lg ${
+                      platform.platform === 'FACEBOOK' ? 'bg-blue-100' : 'bg-pink-100'
+                    }`}>
+                      {platform.platform === 'FACEBOOK' ? (
+                        <Users className="h-6 w-6 text-blue-600" />
+                      ) : (
+                        <Camera className="h-6 w-6 text-pink-600" />
+                      )}
           </div>
+                    <h3 className="text-lg font-medium text-gray-900">
+                      {platform.platform === 'FACEBOOK' ? 'Facebook' : 'Instagram'}
+                    </h3>
         </div>
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                    platform.connected
+                      ? 'bg-green-100 text-green-800'
+                      : 'bg-gray-100 text-gray-800'
+                  }`}>
+                    {platform.connected ? 'Conectado' : 'No conectado'}
+                  </span>
       </div>
 
-      {/* Gráfico de tendencias */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="text-lg font-medium text-gray-900">Tendencias en el tiempo</h3>
-          <div className="flex space-x-2">
-            {(['followers', 'engagement', 'reach', 'posts'] as const).map((metric) => (
-              <button
-                key={metric}
-                onClick={() => setSelectedMetric(metric)}
-                className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
-                  selectedMetric === metric
-                    ? `${getMetricBgColor(metric)} ${getMetricColor(metric)}`
-                    : 'text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                {getMetricIcon(metric)}
-                <span className="ml-2 capitalize">{metric}</span>
+                {platform.connected ? (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm text-gray-600">Seguidores</p>
+                      <p className="text-xl font-bold text-gray-900">
+                        {platform.followers.toLocaleString()}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">Engagement</p>
+                      <p className="text-xl font-bold text-gray-900">
+                        {platform.engagement.toLocaleString()}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">Alcance</p>
+                      <p className="text-xl font-bold text-gray-900">
+                        {platform.reach.toLocaleString()}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">Posts</p>
+                      <p className="text-xl font-bold text-gray-900">
+                        {platform.posts}
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <p className="text-gray-500 mb-4">Conecta tu cuenta para ver métricas</p>
+                    <button className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors">
+                      Conectar {platform.platform === 'FACEBOOK' ? 'Facebook' : 'Instagram'}
               </button>
+                  </div>
+                )}
+              </div>
             ))}
-          </div>
         </div>
         
-        <ResponsiveContainer width="100%" height={400}>
-          <LineChart data={mockMetricsData}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="date" />
-            <YAxis />
-            <Tooltip />
-            <Legend />
-            <Line 
-              type="monotone" 
-              dataKey={selectedMetric} 
-              stroke={selectedMetric === 'followers' ? '#3B82F6' : 
-                     selectedMetric === 'engagement' ? '#8B5CF6' :
-                     selectedMetric === 'reach' ? '#10B981' : '#F59E0B'} 
-              strokeWidth={3}
-              dot={{ fill: selectedMetric === 'followers' ? '#3B82F6' : 
-                     selectedMetric === 'engagement' ? '#8B5CF6' :
-                     selectedMetric === 'reach' ? '#10B981' : '#F59E0B', 
-                     strokeWidth: 2, r: 4 }}
-            />
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
-
-      {/* Comparación por plataforma */}
+          {/* Comparación visual si hay datos */}
+          {chartData.length > 0 && (
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Gráfico de barras por plataforma */}
+              {/* Gráfico de comparación */}
         <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-6">Rendimiento por Plataforma</h3>
+                <h3 className="text-lg font-medium text-gray-900 mb-6">Comparación de Seguidores</h3>
           <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={mockPlatformData}>
+                  <BarChart data={chartData}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="platform" />
               <YAxis />
               <Tooltip />
               <Legend />
               <Bar dataKey="followers" fill="#3B82F6" name="Seguidores" />
-              <Bar dataKey="engagement" fill="#8B5CF6" name="Engagement" />
             </BarChart>
           </ResponsiveContainer>
         </div>
 
-        {/* Gráfico de radar para métricas */}
+              {/* Distribución de engagement */}
         <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-6">Análisis de Métricas</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <RadarChart data={mockPlatformData}>
-              <PolarGrid />
-              <PolarAngleAxis dataKey="platform" />
-              <PolarRadiusAxis />
-              <Radar 
-                name="Seguidores" 
-                dataKey="followers" 
-                stroke="#3B82F6" 
-                fill="#3B82F6" 
-                fillOpacity={0.3} 
-              />
-              <Radar 
-                name="Engagement" 
-                dataKey="engagement" 
-                stroke="#8B5CF6" 
-                fill="#8B5CF6" 
-                fillOpacity={0.3} 
-              />
-              <Tooltip />
-              <Legend />
-            </RadarChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-
-      {/* Distribución de seguidores por plataforma */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-medium text-gray-900 mb-6">Distribución de Seguidores</h3>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <h3 className="text-lg font-medium text-gray-900 mb-6">Distribución de Engagement</h3>
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>
               <Pie
-                data={mockPlatformData}
+                      data={chartData}
                 cx="50%"
                 cy="50%"
                 labelLine={false}
                 label={({ platform, percent }) => `${platform} ${(percent * 100).toFixed(0)}%`}
                 outerRadius={80}
                 fill="#8884d8"
-                dataKey="followers"
+                      dataKey="engagement"
               >
-                {mockPlatformData.map((entry, index) => (
+                      {chartData.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
               </Pie>
               <Tooltip />
             </PieChart>
           </ResponsiveContainer>
-          
-          <div className="space-y-4">
-            {mockPlatformData.map((platform, index) => (
-              <div key={platform.platform} className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <div 
-                    className="w-4 h-4 rounded-full" 
-                    style={{ backgroundColor: COLORS[index % COLORS.length] }}
-                  />
-                  <span className="font-medium">{platform.platform}</span>
-                </div>
-                <div className="text-right">
-                  <div className="font-semibold">{platform.followers.toLocaleString()}</div>
-                  <div className="text-sm text-gray-500">
-                    {((platform.followers / totalFollowers) * 100).toFixed(1)}%
-                  </div>
-                </div>
               </div>
-            ))}
           </div>
-        </div>
-      </div>
-
-      {/* Top posts por rendimiento */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-medium text-gray-900 mb-6">Top Posts por Rendimiento</h3>
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Post
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Plataforma
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Engagement
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Alcance
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Tasa de Engagement
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {mockPostPerformance.map((post) => (
-                <tr key={post.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900 max-w-xs truncate">
-                      {post.content}
-                    </div>
-                    <div className="text-sm text-gray-500">
-                      {format(new Date(post.publishedAt), 'dd MMM yyyy', { locale: es })}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                      {post.platform}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center space-x-4 text-sm text-gray-900">
-                      <span className="flex items-center space-x-1">
-                        <Heart className="h-4 w-4 text-red-500" />
-                        <span>{post.likes}</span>
-                      </span>
-                      <span className="flex items-center space-x-1">
-                        <MessageSquare className="h-4 w-4 text-blue-500" />
-                        <span>{post.comments}</span>
-                      </span>
-                      <span className="flex items-center space-x-1">
-                        <Share2 className="h-4 w-4 text-green-500" />
-                        <span>{post.shares}</span>
-                      </span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {post.views.toLocaleString()}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                      {post.engagementRate}%
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+          )}
+        </>
+      )}
     </div>
   );
 }

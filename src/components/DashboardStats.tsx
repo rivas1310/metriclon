@@ -1,29 +1,78 @@
 'use client';
 
-import { BarChart3, Eye, Heart, TrendingUp, Users, Calendar } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { BarChart3, Eye, Heart, TrendingUp, Users, Calendar, RefreshCw } from 'lucide-react';
 
 interface DashboardStatsProps {
-  stats?: {
-    totalPosts?: number;
-    totalEngagement?: number;
-    totalReach?: number;
-    postsThisMonth?: number;
-    engagementRate?: number;
-    topPlatform?: string;
-  };
+  organizationId?: string;
 }
 
-export function DashboardStats({ stats }: DashboardStatsProps) {
-  const defaultStats = {
-    totalPosts: 0,
-    totalEngagement: 0,
-    totalReach: 0,
-    postsThisMonth: 0,
-    engagementRate: 0,
-    topPlatform: 'Instagram',
+interface StatsData {
+  totalFollowers: number;
+  totalEngagement: number;
+  totalReach: number;
+  totalImpressions: number;
+  engagementRate: number;
+  postCount: number;
+  connectedPlatforms: string[];
+}
+
+export function DashboardStats({ organizationId }: DashboardStatsProps) {
+  const [stats, setStats] = useState<StatsData | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchStats = async () => {
+    if (!organizationId) return;
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await fetch(`/api/metrics?organizationId=${organizationId}&days=30`);
+      
+      if (!response.ok) {
+        throw new Error('Error al obtener estadísticas');
+      }
+
+      const result = await response.json();
+      
+      const connectedPlatforms = result.data.platforms.map((p: any) => 
+        p.platform === 'FACEBOOK' ? 'Facebook' : 'Instagram'
+      );
+
+      setStats({
+        totalFollowers: result.data.summary.totalFollowers,
+        totalEngagement: result.data.summary.totalEngagement,
+        totalReach: result.data.summary.totalReach,
+        totalImpressions: result.data.summary.totalImpressions,
+        engagementRate: result.data.summary.engagementRate,
+        postCount: result.data.summary.postCount,
+        connectedPlatforms,
+      });
+
+    } catch (err) {
+      console.error('Error fetching dashboard stats:', err);
+      setError(err instanceof Error ? err.message : 'Error desconocido');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const data = { ...defaultStats, ...stats };
+  useEffect(() => {
+    fetchStats();
+  }, [organizationId]);
+
+  // Datos por defecto mientras carga o si hay error
+  const data = stats || {
+    totalFollowers: 0,
+    totalEngagement: 0,
+    totalReach: 0,
+    totalImpressions: 0,
+    engagementRate: 0,
+    postCount: 0,
+    connectedPlatforms: [],
+  };
 
   type ChangeType = 'positive' | 'negative' | 'neutral';
   
@@ -36,51 +85,51 @@ export function DashboardStats({ stats }: DashboardStatsProps) {
     changeType: ChangeType;
   }> = [
     {
-      title: 'Total Posts',
-      value: data.totalPosts.toLocaleString(),
-      icon: BarChart3,
+      title: 'Total Seguidores',
+      value: data.totalFollowers.toLocaleString(),
+      icon: Users,
       color: 'bg-blue-500',
-      change: '+12%',
-      changeType: 'positive',
+      change: loading ? '...' : 'En tiempo real',
+      changeType: 'neutral',
     },
     {
       title: 'Total Engagement',
       value: data.totalEngagement.toLocaleString(),
       icon: Heart,
       color: 'bg-red-500',
-      change: '+8%',
-      changeType: 'positive',
+      change: loading ? '...' : 'En tiempo real',
+      changeType: 'neutral',
     },
     {
-      title: 'Total Reach',
+      title: 'Alcance Total',
       value: data.totalReach.toLocaleString(),
       icon: Eye,
       color: 'bg-green-500',
-      change: '+15%',
-      changeType: 'positive',
+      change: loading ? '...' : 'En tiempo real',
+      changeType: 'neutral',
     },
     {
-      title: 'Posts este Mes',
-      value: data.postsThisMonth.toString(),
-      icon: Calendar,
+      title: 'Posts Analizados',
+      value: data.postCount.toString(),
+      icon: BarChart3,
       color: 'bg-purple-500',
-      change: '+5%',
-      changeType: 'positive',
+      change: loading ? '...' : 'Últimos 30 días',
+      changeType: 'neutral',
     },
     {
       title: 'Tasa de Engagement',
       value: `${data.engagementRate.toFixed(2)}%`,
       icon: TrendingUp,
       color: 'bg-orange-500',
-      change: '+2.1%',
-      changeType: 'positive',
+      change: loading ? '...' : 'Promedio',
+      changeType: 'neutral',
     },
     {
-      title: 'Plataforma Top',
-      value: data.topPlatform,
-      icon: Users,
+      title: 'Plataformas Conectadas',
+      value: data.connectedPlatforms.length.toString(),
+      icon: Calendar,
       color: 'bg-indigo-500',
-      change: 'Instagram',
+      change: data.connectedPlatforms.join(', ') || 'Ninguna',
       changeType: 'neutral',
     },
   ];
