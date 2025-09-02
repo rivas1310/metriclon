@@ -17,10 +17,11 @@ export async function GET(request: NextRequest) {
     // Generar state token único según TikTok Official Documentation
     const csrfState = Math.random().toString(36).substring(2);
     
-    // Generar URL de autorización
+    // Generar URL de autorización con scopes completos según documentación oficial
     const authUrl = new URL('https://www.tiktok.com/v2/auth/authorize/');
     authUrl.searchParams.append('client_key', clientId);
-    authUrl.searchParams.append('scope', 'user.info.basic');
+    // Scopes según documentación oficial para funcionalidad completa
+    authUrl.searchParams.append('scope', 'user.info.basic,user.info.profile,user.info.stats,video.list,video.upload,video.publish');
     authUrl.searchParams.append('response_type', 'code');
     authUrl.searchParams.append('redirect_uri', redirectUri);
     authUrl.searchParams.append('state', csrfState);
