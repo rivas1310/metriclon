@@ -96,10 +96,38 @@ export async function GET(request: NextRequest) {
     const organizationId = '997693ca-8304-464e-87a9-ccb22b576724';
     
     console.log('Guardando TikTok en organización:', organizationId);
+    console.log('Datos para crear canal:', {
+      platform: 'TIKTOK',
+      externalId: open_id,
+      name: userData.data?.user?.display_name || 'TikTok Account',
+      organizationId: organizationId
+    });
 
-    // Crear canal de TikTok con manejo de tokens según documentación oficial
-    const channel = await prisma.channel.create({
-      data: {
+    // Crear o actualizar canal de TikTok con manejo de tokens según documentación oficial
+    const channel = await prisma.channel.upsert({
+      where: {
+        organizationId_platform_externalId: {
+          organizationId: organizationId,
+          platform: 'TIKTOK',
+          externalId: open_id,
+        },
+      },
+      update: {
+        name: userData.data?.user?.display_name || 'TikTok Account',
+        accessToken: access_token,
+        refreshToken: refresh_token,
+        tokenExpiresAt: expires_in ? new Date(Date.now() + expires_in * 1000) : null,
+        isActive: true,
+        updatedAt: new Date(),
+        meta: {
+          openId: open_id,
+          scope: scope,
+          expires_in: expires_in,
+          refresh_expires_in: refresh_expires_in,
+          userInfo: userData.data?.user || {},
+        },
+      },
+      create: {
         platform: 'TIKTOK',
         externalId: open_id, // CAMPO OBLIGATORIO
         name: userData.data?.user?.display_name || 'TikTok Account',
@@ -126,9 +154,24 @@ export async function GET(request: NextRequest) {
     );
 
   } catch (error) {
-    console.error('Error en callback de TikTok:', error);
+    console.error('❌ Error en callback de TikTok:', error);
+    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack available');
+    console.error('Error message:', error instanceof Error ? error.message : String(error));
+    
+    // Proporcionar más información sobre el tipo de error
+    let errorMessage = 'callback_failed';
+    if (error instanceof Error) {
+      if (error.message.includes('Unique constraint')) {
+        errorMessage = 'account_already_connected';
+      } else if (error.message.includes('Foreign key constraint')) {
+        errorMessage = 'organization_not_found';
+      } else if (error.message.includes('prisma')) {
+        errorMessage = 'database_error';
+      }
+    }
+    
     return NextResponse.redirect(
-      `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?error=tiktok_callback_failed`
+      `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?error=tiktok_${errorMessage}&details=${encodeURIComponent(error instanceof Error ? error.message : String(error))}`
     );
   }
 }
